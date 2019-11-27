@@ -20,9 +20,3 @@ td.vcorr {
         width: 20px;
         height: 70px;
 }
-td.hcorr:hover {
-        background-color: #aaaaaa;
-}
-td.built {
-        background-color: #444444;
-}

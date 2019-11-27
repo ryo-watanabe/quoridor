@@ -1,63 +1,137 @@
-function start() {
-        var tb = document.getElementById("board");
-        for (i = 0; i < 5; i++) {
-                var tr = document.createElement("tr");
-                for (j = 0; j < 5; j++) {
-                        var td = document.createElement("td");
-                        td.className = "room";
-                        tr.appendChild(td)
-                        if (j == 4) break;
-                        var td = document.createElement("td");
-                        td.className = "vcorr";
-                        tr.appendChild(td)
-                }
-                tb.appendChild(tr);
-                if (i == 4) break;
-                var tr = document.createElement("tr");
-                for (j = 0; j < 5; j++) {
-                        var td = document.createElement("td");
-                        td.className = "hcorr";
-                        tr.appendChild(td)
-                        if (j == 4) break;
-                        var td = document.createElement("td");
-                        td.className = "pole";
-                        tr.appendChild(td)
-                }
-                tb.appendChild(tr);
-        }
+var wall = {}
+var altwall = {}
+
+function addattr(element) {
+	element.setAttribute("onmouseover", "mouseover(this)");
+	element.setAttribute("onmouseout", "mouseout(this)");
+	element.setAttribute("onclick", "mouseclick(this)");
 }
 
-const wall = {
-        "p00":["00:01", "p00", "10:11"],
-        "p10":["10:11", "p10", "20:21"],
-        "p20":["20:21", "p20", "30:31"],
-        "p30":["30:31", "p30", "40:41"],
-        "p01":["01:02", "p01", "11:12"],
-        "p11":["11:12", "p11", "21:22"],
-        "p21":["21:22", "p21", "31:32"],
-        "p31":["31:32", "p31", "41:42"],
-        "p02":["02:03", "p02", "12:13"],
-        "p12":["12:13", "p12", "22:23"],
-        "p22":["22:23", "p22", "32:33"],
-        "p32":["32:33", "p32", "42:43"],
-        "p03":["03:04", "p03", "13:14"],
-        "p13":["13:14", "p13", "23:24"],
-        "p23":["23:24", "p23", "33:34"],
-        "p33":["33:34", "p33", "43:44"],
-};
+function start() {var tb = document.getElementById("board");
+	for (i = 0; i < 5; i++) {
+		var tr = document.createElement("tr");
+		for (j = 0; j < 5; j++) {
+
+			// room
+			var td = document.createElement("td");
+			td.className = "room";
+			td.id = "room" + String(i) + String(j);
+			addattr(td);
+			tr.appendChild(td);
+
+			if (j == 4) break;
+
+			// vcorr
+			var td = document.createElement("td");
+			td.className = "vcorr";
+			td.id = "corr" + String(i) + String(j) + ":" + String(i) + String(j + 1);
+			addattr(td);
+			if (i > 0) {
+				altwall[td.id] = [
+					"corr" + String(i - 1) + String(j) + ":" + String(i - 1) + String(j + 1),
+					"pole" + String(i - 1) + String(j),
+					td.id
+				];
+			}
+			if (i < 4) {
+				wall[td.id] = [
+					td.id,
+					"pole" + String(i) + String(j),
+					"corr" + String(i + 1) + String(j) + ":" + String(i + 1) + String(j + 1)
+				];
+			}
+			tr.appendChild(td);
+
+		}
+
+		tb.appendChild(tr);
+		if (i == 4) break;
+		var tr = document.createElement("tr");
+		for (j = 0; j < 5; j++) {
+
+			// hcorr
+			var td = document.createElement("td");
+			td.className = "hcorr";
+			td.id = "corr" + String(i) + String(j) + ":" + String(i + 1) + String(j);
+			addattr(td);
+			if (j > 0) {
+				altwall[td.id] = [
+					"corr" + String(i) + String(j - 1) + ":" + String(i + 1) + String(j - 1),
+					"pole" + String(i) + String(j - 1),
+					td.id
+				];
+			}
+			if (j < 4) {
+				wall[td.id] = [
+					td.id,
+					"pole" + String(i) + String(j),
+					"corr" + String(i) + String(j + 1) + ":" + String(i + 1) + String(j + 1)
+				];
+			}
+			tr.appendChild(td);
+
+			if (j == 4) break;
+
+			// pole
+			var td = document.createElement("td");
+			td.className = "pole";
+			td.id = "pole" + String(i) + String(j);
+			addattr(td);
+			wall[td.id] = [
+				"corr" + String(i) + String(j) + ":" + String(i) + String(j + 1),
+				td.id,
+				"corr" + String(i + 1) + String(j) + ":" + String(i + 1) + String(j + 1)
+			];
+			altwall[td.id] = [
+				"corr" + String(i) + String(j) + ":" + String(i + 1) + String(j),
+				td.id,
+				"corr" + String(i) + String(j + 1) + ":" + String(i + 1) + String(j + 1)
+			];
+			tr.appendChild(td);
+		}
+		tb.appendChild(tr);
+	}
+}
+
+function isbuilt(wallparts) {
+	for (i = 0; i < wallparts.length; i++) {
+		if (document.getElementById(wallparts[i]).classList.contains("built")) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function mouseclick(element) {
+	if (wall[element.id] && !isbuilt(wall[element.id])) {
+		wall[element.id].forEach( function(value) { document.getElementById(value).classList.add("built"); });
+		drawwall(wall[element.id], "#444444");
+	} else if (altwall[element.id] && !isbuilt(altwall[element.id])) {
+		altwall[element.id].forEach( function(value) { document.getElementById(value).classList.add("built"); });
+		drawwall(altwall[element.id], "#444444");
+	}
+}
 
 function mouseover(element) {
-        drawwall(element, "#aaaaaa");
+	if (wall[element.id] && !isbuilt(wall[element.id])) {
+		drawwall(wall[element.id], "#cccccc");
+	} else if (altwall[element.id] && !isbuilt(altwall[element.id])) {
+		drawwall(altwall[element.id], "#cccccc");
+	}
 }
 
 function mouseout(element) {
-        drawwall(element, "#ffffff");
+	if (wall[element.id] && !isbuilt(wall[element.id])) {
+		drawwall(wall[element.id], "#ffffff");
+	} else if (altwall[element.id] && !isbuilt(altwall[element.id])) {
+		drawwall(altwall[element.id], "#ffffff");
+	}
 }
 
-function drawwall(element, color) {
-        wall[element.id].forEach( function(value) { setbg(document.getElementById(value), color); });
+function drawwall(wallparts, color) {
+	wallparts.forEach( function(value) { setbg(document.getElementById(value), color); });
 }
 
 function setbg(element, color) {
-        element.style.backgroundColor = color;
+	element.style.backgroundColor = color;
 }
