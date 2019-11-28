@@ -18,7 +18,8 @@ function roomaddattr(element) {
 	element.setAttribute("onclick", "roommouseclick(this)");
 }
 
-function start() {var tb = document.getElementById("board");
+function start() {
+	var tb = document.getElementById("board");
 	for (i = 0; i < dim; i++) {
 		var tr = document.createElement("tr");
 		for (j = 0; j < dim; j++) {
