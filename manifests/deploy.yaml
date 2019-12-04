@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quoridor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quoridor
+  template:
+    metadata:
+      labels:
+        app: quoridor
+    spec:
+      containers:
+      - name: pv-mng
+        image: alpine
+        command:
+        - /mnt/quoridor
+        - --contents-path=/mnt/contents
+        volumeMounts:
+        - mountPath: /mnt
+          name: bin
+      volumes:
+      - persistentVolumeClaim:
+          claimName: testclaim
+        name: bin

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"encoding/json"
 	"os"
-	//"flag"
+	"flag"
 	//"strconv"
 	"io"
 	"bufio"
@@ -142,15 +142,19 @@ func apiRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-        // route handler
-        http.HandleFunc("/", apiRequest)
+	var contentsPath string
+	flag.StringVar(&contentsPath, "contents-path", "/contents", "Set static contents path")
 
-        // do serve
-        err := http.ListenAndServe(":8080", nil)
+	// route handler
+	http.HandleFunc("/api/", apiRequest)
 
-        // error abort
-        if err != nil {
-                fmt.Println(err)
-                os.Exit(1)
-        }
+	// route contents
+	http.Handle("/", http.FileServer(http.Dir(contentsPath)))
+
+	// do serve
+	err := http.ListenAndServe(":8080", nil)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }

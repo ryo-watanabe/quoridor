@@ -1,0 +1,9 @@
+kind: PersistentVolumeClaim
+metadata:
+  name: testclaim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
