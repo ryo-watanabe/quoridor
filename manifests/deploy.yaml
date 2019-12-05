@@ -13,11 +13,13 @@ spec:
         app: quoridor
     spec:
       containers:
-      - name: pv-mng
+      - name: quoridor
         image: alpine
         command:
         - /mnt/quoridor
         - --contents-path=/mnt/contents
+        - --username=username
+        - --password=password
         volumeMounts:
         - mountPath: /mnt
           name: bin

@@ -9,6 +9,7 @@ import (
 	//"strconv"
 	"io"
 	"bufio"
+	"crypto/subtle"
 )
 
 type position struct {
@@ -141,15 +142,37 @@ func apiRequest(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func BasicAuth(handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, pass, ok := r.BasicAuth()
+		if !ok || subtle.ConstantTimeCompare([]byte(user), []byte(username)) != 1 || subtle.ConstantTimeCompare([]byte(pass), []byte(password)) != 1 {
+			w.Header().Set("WWW-Authenticate", `Basic realm="`+realm+`"`)
+			w.WriteHeader(401)
+			w.Write([]byte("Unauthorised.\n"))
+			return
+		}
+		handler(w, r)
+	}
+}
+
+var (
+	realm = "Please enter your username and password"
+	contentsPath, username, password string
+)
+
 func main() {
-	var contentsPath string
 	flag.StringVar(&contentsPath, "contents-path", "/contents", "Set static contents path")
+	flag.StringVar(&username, "username", "user", "Basic auth username")
+	flag.StringVar(&password, "password", "pass", "Basic auth password")
+	flag.Parse()
 
 	// route handler
-	http.HandleFunc("/api/", apiRequest)
+	http.HandleFunc("/api/", BasicAuth(apiRequest))
 
 	// route contents
-	http.Handle("/", http.FileServer(http.Dir(contentsPath)))
+	http.HandleFunc("/", BasicAuth(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(contentsPath)).ServeHTTP(w, r)
+	}))
 
 	// do serve
 	err := http.ListenAndServe(":8080", nil)
