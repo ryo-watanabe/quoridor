@@ -21,5 +21,11 @@ td.vcorr {
         height: 70px;
 }
 td.move:hover {
+        background-color: #ccffff;
+}
+td.player {
         background-color: #99cccc;
+}
+td.com {
+        background-color: #cc99cc;
 }

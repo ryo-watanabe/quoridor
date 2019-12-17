@@ -10,6 +10,8 @@ import (
 	"io"
 	"bufio"
 	"crypto/subtle"
+	"math/rand"
+	"time"
 )
 
 type position struct {
@@ -17,14 +19,19 @@ type position struct {
 	Y int	`json:"y"`
 }
 
+func (p *position)Equals(pos position) bool {
+	return (p.X == pos.X && p.Y == pos.Y)
+}
+
 type wall struct {
-	Pole position	`json:"pole"`
-	Blocking [][]position	`json:"blocking"`
+	Pole position	`json:"poles"`
+	Blockings [][]position	`json:"blockings"`
 }
 
 type QuoridorBoard struct {
 	Dimension int	`json:"dimension"`
-	Walls []wall	`json:"walls"`
+	Poles []position	`json:"poles"`
+	Blockings [][]position	`json:"blockings"`
 	PlayerPos position	`json:"playerPos"`
 	ComPos position	`json:"comPos"`
 }
@@ -40,6 +47,87 @@ type QuoridorResponse struct {
 	Message string	`json:"message,omitempty"`
 }
 
+func isBlocked(a, b position, board *QuoridorBoard) bool {
+	for _, block := range(board.Blockings) {
+		if (a.Equals(block[0]) && b.Equals(block[1])) ||
+		   (a.Equals(block[1]) && b.Equals(block[0])) {
+			return true
+		}
+	}
+	return false
+}
+
+func possibleMoves(board *QuoridorBoard) []position {
+	moves := make([]position, 0)
+	// Right
+	moveright := position{X:board.ComPos.X+1, Y:board.ComPos.Y}
+	if moveright.X < board.Dimension && !isBlocked(board.ComPos, moveright, board) {
+		moves = append(moves, moveright)
+	}
+	// Left
+	moveleft := position{X:board.ComPos.X-1, Y:board.ComPos.Y}
+	if moveleft.X > 0 && !isBlocked(board.ComPos, moveleft, board) {
+		moves = append(moves, moveleft)
+	}
+	// Up
+	moveup := position{X:board.ComPos.X, Y:board.ComPos.Y-1}
+	if moveup.Y > 0 && !isBlocked(board.ComPos, moveup, board) {
+		moves = append(moves, moveup)
+	}
+	// Down
+	movedown := position{X:board.ComPos.X, Y:board.ComPos.Y+1}
+	if movedown.Y < board.Dimension && !isBlocked(board.ComPos, movedown, board) {
+		moves = append(moves, movedown)
+	}
+	return moves
+}
+
+func isPossible(w *wall, board *QuoridorBoard) bool {
+	for _, builtPole := range(board.Poles) {
+		if builtPole.Equals(w.Pole) {
+			return false
+		}
+	}
+	if isBlocked(w.Blockings[0][0], w.Blockings[0][1], board) {
+		return false
+	}
+	if isBlocked(w.Blockings[1][0], w.Blockings[1][1], board) {
+		return false
+	}
+	return true
+}
+
+func possibleWalls(board *QuoridorBoard) []wall {
+	walls := make([]wall, 0)
+	for i := 0; i < board.Dimension - 1; i++ {
+		for j := 0; j < board.Dimension - 1; j++ {
+			// vertical
+			vw := wall{
+				Pole: position{Y:i, X:j},
+				Blockings: [][]position{
+					{position{Y:i, X:j},position{Y:i, X:j+1}},
+					{position{Y:i+1, X:j},position{Y:i+1, X:j+1}},
+				},
+			}
+			if isPossible(&vw, board) {
+				walls = append(walls, vw)
+			}
+			// horizontal
+			hw := wall{
+				Pole: position{Y:i, X:j},
+				Blockings: [][]position{
+					{position{Y:i, X:j},position{Y:i+1, X:j}},
+					{position{Y:i, X:j+1},position{Y:i+1, X:j+1}},
+				},
+			}
+			if isPossible(&hw, board) {
+				walls = append(walls, hw)
+			}
+		}
+	}
+	return walls
+}
+
 func initBoard(req *QuoridorRequest, ret *QuoridorResponse) error {
 	dim := 5
 	if req.Board != nil && req.Board.Dimension != 0 {
@@ -51,8 +139,8 @@ func initBoard(req *QuoridorRequest, ret *QuoridorResponse) error {
 	}
 	ret.Board = &QuoridorBoard{
 		Dimension: dim,
-		ComPos: position{X:0, Y:dim/2},
-		PlayerPos: position{X:dim-1, Y:dim/2},
+		ComPos: position{Y:0, X:dim/2},
+		PlayerPos: position{Y:dim-1, X:dim/2},
 	}
 	return nil
 }
@@ -65,27 +153,36 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 		}
 		return nil
 	}
+	if req.Action == "Com" {
+		ret.Board = req.Board
+		rand.Seed(time.Now().UnixNano())
+		moves := possibleMoves(ret.Board)
+		walls := possibleWalls(ret.Board)
+		if rand.Intn(2) == 0 && len(moves) > 0 {
+			ret.Board.ComPos = moves[rand.Intn(len(moves))]
+		} else if len(walls) > 0 {
+			wall := walls[rand.Intn(len(walls))]
+			ret.Board.Poles = append(ret.Board.Poles, wall.Pole)
+			ret.Board.Blockings = append(ret.Board.Blockings, wall.Blockings...)
+		}
+		return nil
+	}
 	if req.Action == "Dummy" {
 		err := initBoard(req, ret)
 		if err != nil {
 			return err
 		}
-		newWall := wall{
-			Pole: position{X:0, Y:1},
-			Blocking: [][]position{
-				{position{X:0, Y:0},position{X:0, Y:1}},
-				{position{X:1, Y:0},position{X:1, Y:1}},
-			},
-		}
-		ret.Board.Walls = append(ret.Board.Walls, newWall)
-		newWall = wall{
-			Pole: position{X:0, Y:2},
-			Blocking: [][]position{
-				{position{X:0, Y:1},position{X:1, Y:1}},
-				{position{X:0, Y:2},position{X:1, Y:2}},
-			},
-		}
-		ret.Board.Walls = append(ret.Board.Walls, newWall)
+		ret.Board.Poles = append(ret.Board.Poles, position{X:0, Y:0})
+		ret.Board.Blockings = append(ret.Board.Blockings, []position{position{X:0, Y:0},position{X:0, Y:1}})
+		ret.Board.Blockings = append(ret.Board.Blockings, []position{position{X:1, Y:0},position{X:1, Y:1}})
+
+		ret.Board.Poles = append(ret.Board.Poles, position{X:0, Y:1})
+		ret.Board.Blockings = append(ret.Board.Blockings, []position{position{X:0, Y:1},position{X:1, Y:1}})
+		ret.Board.Blockings = append(ret.Board.Blockings, []position{position{X:0, Y:2},position{X:1, Y:2}})
+
+		ret.Board.ComPos = position{X:1, Y:2}
+		ret.Board.PlayerPos = position{X:3, Y:0}
+
 		return nil
 	}
 
