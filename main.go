@@ -47,6 +47,24 @@ type QuoridorResponse struct {
 	Message string	`json:"message,omitempty"`
 }
 
+func (b *QuoridorBoard)Copy() *QuoridorBoard {
+	var board QuoridorBoard
+	board = *b
+	board.Poles = make([]position,0)
+	board.Poles = append(board.Poles, b.Poles...)
+	board.Blockings = make([][]position,0)
+	for _, block := range(b.Blockings) {
+		newBlock := make([]position,0)
+		newBlock = append(newBlock, block...)
+		board.Blockings = append(board.Blockings, newBlock)
+	}
+	return &board
+}
+
+func maxRoute(board *QuoridorBoard) int {
+	return board.Dimension*board.Dimension
+}
+
 func isBlocked(a, b position, board *QuoridorBoard) bool {
 	for _, block := range(board.Blockings) {
 		if (a.Equals(block[0]) && b.Equals(block[1])) ||
@@ -55,6 +73,13 @@ func isBlocked(a, b position, board *QuoridorBoard) bool {
 		}
 	}
 	return false
+}
+
+func isOnBoard(pos position, board *QuoridorBoard) bool {
+	if pos.X < 0 || pos.X >= board.Dimension || pos.Y < 0 || pos.Y >= board.Dimension {
+		return false
+	}
+	return true
 }
 
 func possibleMoves(board *QuoridorBoard) []position {
@@ -154,6 +179,58 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 		return nil
 	}
 	if req.Action == "Com" {
+		ret.Board = req.Board
+
+		moves := possibleMoves(ret.Board)
+		walls := possibleWalls(ret.Board)
+
+		max := maxRoute(ret.Board)
+
+		bestMoveEval := -100
+		bestMoveIndex := -1
+		for index, m := range(moves) {
+			com, com_ok := shortestRoute(ret.Board, m, ret.Board.Dimension-1, max)
+			player, player_ok := shortestRoute(ret.Board, ret.Board.PlayerPos, 0, max)
+			if !com_ok || !player_ok {
+				continue
+			}
+			if player - com > bestMoveEval {
+				bestMoveEval = player - com
+				bestMoveIndex = index
+			}
+		}
+
+		bestWallEval := -100
+		bestWallIndex := -1
+		for index, w := range(walls) {
+			testboard := ret.Board.Copy()
+			testboard.Poles = append(testboard.Poles, w.Pole)
+			testboard.Blockings = append(testboard.Blockings, w.Blockings...)
+
+			com, com_ok := shortestRoute(testboard, testboard.ComPos, testboard.Dimension-1, max)
+			player, player_ok := shortestRoute(testboard, testboard.PlayerPos, 0, max)
+			if !com_ok || !player_ok {
+				continue
+			}
+			if player - com > bestWallEval {
+				bestWallEval = player - com
+				bestWallIndex = index
+			}
+		}
+
+		if bestWallIndex < 0 && bestMoveIndex < 0 {
+			return fmt.Errorf("No possible move/wall")
+		}
+		if bestWallIndex >= 0 && (bestMoveIndex < 0 || bestMoveEval < bestWallEval) {
+			wall := walls[bestWallIndex]
+			ret.Board.Poles = append(ret.Board.Poles, wall.Pole)
+			ret.Board.Blockings = append(ret.Board.Blockings, wall.Blockings...)
+		} else {
+			ret.Board.ComPos = moves[bestMoveIndex]
+		}
+		return nil
+	}
+	if req.Action == "Rand" {
 		ret.Board = req.Board
 		rand.Seed(time.Now().UnixNano())
 		moves := possibleMoves(ret.Board)
