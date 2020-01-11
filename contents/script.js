@@ -10,6 +10,8 @@ var board = {};
 function addattr(element) {
 	element.setAttribute("onmouseover", "mouseover(this)");
 	element.setAttribute("onmouseout", "mouseout(this)");
+	element.setAttribute("ontouchstart", "mouseover(this)");
+	element.setAttribute("ontouchend", "mouseout(this)");
 	element.setAttribute("onclick", "mouseclick(this)");
 }
 
