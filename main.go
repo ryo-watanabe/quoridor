@@ -82,27 +82,46 @@ func isOnBoard(pos position, board *QuoridorBoard) bool {
 	return true
 }
 
-func possibleMoves(board *QuoridorBoard) []position {
+func possibleMovesFrom(pos position, board *QuoridorBoard) []position {
 	moves := make([]position, 0)
 	// Right
-	moveright := position{X:board.ComPos.X+1, Y:board.ComPos.Y}
-	if moveright.X < board.Dimension && !isBlocked(board.ComPos, moveright, board) {
+	moveright := position{X:pos.X+1, Y:pos.Y}
+	if moveright.X < board.Dimension && !isBlocked(pos, moveright, board) {
 		moves = append(moves, moveright)
 	}
 	// Left
-	moveleft := position{X:board.ComPos.X-1, Y:board.ComPos.Y}
-	if moveleft.X > 0 && !isBlocked(board.ComPos, moveleft, board) {
+	moveleft := position{X:pos.X-1, Y:pos.Y}
+	if moveleft.X > 0 && !isBlocked(pos, moveleft, board) {
 		moves = append(moves, moveleft)
 	}
 	// Up
-	moveup := position{X:board.ComPos.X, Y:board.ComPos.Y-1}
-	if moveup.Y > 0 && !isBlocked(board.ComPos, moveup, board) {
+	moveup := position{X:pos.X, Y:pos.Y-1}
+	if moveup.Y > 0 && !isBlocked(pos, moveup, board) {
 		moves = append(moves, moveup)
 	}
 	// Down
-	movedown := position{X:board.ComPos.X, Y:board.ComPos.Y+1}
-	if movedown.Y < board.Dimension && !isBlocked(board.ComPos, movedown, board) {
+	movedown := position{X:pos.X, Y:pos.Y+1}
+	if movedown.Y < board.Dimension && !isBlocked(pos, movedown, board) {
 		moves = append(moves, movedown)
+	}
+	return moves
+}
+
+func possibleMoves(board *QuoridorBoard) []position {
+	moves := make([]position, 0)
+	comMoves := possibleMovesFrom(board.ComPos, board)
+	for _, m := range(comMoves) {
+		// Jump over player pos
+		if m.Equals(board.PlayerPos) {
+			playerMoves := possibleMovesFrom(m, board)
+			for _, pm := range(playerMoves) {
+				if !pm.Equals(board.ComPos) {
+					moves = append(moves, pm)
+				}
+			}
+		} else {
+			moves = append(moves, m)
+		}
 	}
 	return moves
 }
@@ -181,7 +200,22 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 	if req.Action == "Com" {
 		ret.Board = req.Board
 
+		// player won
+		if ret.Board.PlayerPos.Y == 0 {
+			ret.Message = "Player won"
+			return nil
+		}
+
+		// computer won
 		moves := possibleMoves(ret.Board)
+		for _, m := range(moves) {
+			if m.Y == ret.Board.Dimension-1 {
+				ret.Board.ComPos = m
+				ret.Message = "Com won"
+				return nil
+			}
+		}
+
 		walls := possibleWalls(ret.Board)
 
 		max := maxRoute(ret.Board)

@@ -24,6 +24,12 @@ function roomaddattr(element) {
 function quoridor_data(res)
 {
 	console.log(res)
+	document.getElementById("status").innerHTML = res.status;
+	if (res.message) {
+		document.getElementById("message").innerHTML = res.message;
+	} else {
+		document.getElementById("message").innerHTML = "";
+	}
 	if (res.status != "OK") {
 		return;
 	}
@@ -45,9 +51,10 @@ function quoridor_data(res)
 	}
 
 	updateyou(String(res.board.playerPos.y) + String(res.board.playerPos.x));
-	updatemove();
 	updatecom(String(res.board.comPos.y) + String(res.board.comPos.x));
+	updatemove();
 	board = res.board;
+	document.getElementById("status").innerHTML = res.status;
 }
 
 function start() {
@@ -265,8 +272,28 @@ function updatemove() {
 			return
 		}
 		if (!document.getElementById(corrid).classList.contains("built")) {
-			you["move"].push(neigh);
-			document.getElementById(neigh).classList.add("move");
+			if (com["nowon"] == neigh) {
+				for (j = 0; j < room[com["nowon"]].length; j++) {
+					comneigh = room[com["nowon"]][j];
+					if (comneigh == you["nowon"]) {
+						continue;
+					}
+					comcorrid = "corr" + comneigh + ":" + com["nowon"];
+					if (corr.indexOf(comcorrid) < 0) {
+						comcorrid = "corr" + com["nowon"] + ":" + comneigh;
+					}
+					if (corr.indexOf(comcorrid) < 0) {
+						return
+					}
+					if (!document.getElementById(comcorrid).classList.contains("built")) {
+						you["move"].push(comneigh);
+						document.getElementById(comneigh).classList.add("move");
+					}
+				}
+			} else {
+				you["move"].push(neigh);
+				document.getElementById(neigh).classList.add("move");
+			}
 		}
 	}
 }
