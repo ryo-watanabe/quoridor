@@ -166,8 +166,8 @@ func initBoard(req *QuoridorRequest, ret *QuoridorResponse) error {
 		Dimension: dim,
 		ComPos: position{Y:0, X:dim/2},
 		PlayerPos: position{Y:dim-1, X:dim/2},
-		ComWalls: dim + 1,
-		PlayerWalls: dim + 1,
+		ComWalls: (dim + 1)*(dim + 1)/10,
+		PlayerWalls: (dim + 1)*(dim + 1)/10,
 	}
 	return nil
 }

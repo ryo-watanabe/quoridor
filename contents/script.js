@@ -52,7 +52,7 @@ function quoridor_data(res)
 		res.board.blockings = [];
 	}
 	// walls left
-	document.getElementById("walls").innerHTML = " / Walls left com:" + res.board.comWalls + " player:" + res.board.playerWalls;
+	document.getElementById("walls").innerHTML = "Walls left com:" + res.board.comWalls + " player:" + res.board.playerWalls;
 
 	updateyou(String(res.board.playerPos.y) + String(res.board.playerPos.x));
 	updatecom(String(res.board.comPos.y) + String(res.board.comPos.x));
@@ -61,10 +61,11 @@ function quoridor_data(res)
 
 	document.getElementById("undobtn").disabled = (undoboard == null);
 	document.getElementById("comfirstbtn").disabled = !gameinit;
-	gameinit = false;
 }
 
 function comfirst() {
+	if (!gameinit) return;
+	gameinit = false;
 	request_quoridor_data({action:"Com", board:board});
 }
 
@@ -112,6 +113,11 @@ function undo() {
 	undoboard = null;
 }
 
+function newgame(dimension) {
+	dim = dimension;
+	start();
+}
+
 function start() {
 	gameinit = true;
 	draw_board();
@@ -120,6 +126,16 @@ function start() {
 
 function draw_board() {
 	var tb = document.getElementById("board");
+
+	// clear game board
+	while (tb.firstChild) tb.removeChild(tb.firstChild);
+	wall = {};
+	altwall = {};
+	room = {};
+	corr = [];
+	you = {"nowon":"42", "move":[]};
+	com = {"nowon":"02", "move":[]};
+
 	for (i = 0; i < dim; i++) {
 		var tr = document.createElement("tr");
 		for (j = 0; j < dim; j++) {
@@ -220,7 +236,7 @@ function draw_board() {
 		}
 		tb.appendChild(tr);
 	}
-	updatemove()
+	//updatemove()
 }
 
 function setbg(element, color) {
@@ -253,6 +269,7 @@ function mouseclick(element) {
 
 function writewall(wallparts) {
 	undocopy();
+	gameinit = false;
 	wallparts.forEach( function(val) {
 		if (val.startsWith("pole")) {
 			board.poles.push({y:parseInt(val.substr(4, 1)), x:parseInt(val.substr(5,1))});
@@ -316,7 +333,7 @@ function unbuildblock(block) {
 function updateyou(roomid) {
 	document.getElementById(you["nowon"]).innerHTML = "";
 	document.getElementById(you["nowon"]).classList.remove("player");
-	document.getElementById(roomid).innerHTML = "Player";
+	document.getElementById(roomid).innerHTML = "Ply";
 	document.getElementById(roomid).classList.add("player");
 	you["nowon"] = roomid;
 }
@@ -376,6 +393,7 @@ function roommouseclick(element) {
 		if (element.id == you["move"][i]) {
 			updateyou(element.id);
 			undocopy();
+			gameinit = false;
 			board.playerPos = {y:parseInt(element.id.substr(0, 1)), x:parseInt(element.id.substr(1, 1))}
 			request_quoridor_data({action:"Com", board:board});
 			return;

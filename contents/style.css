@@ -8,18 +8,18 @@ td {
         text-align: center;
 }
 td.room {
-        width: 100px;
-        height: 100px;
+        width: 70px;
+        height: 70px;
         border: 2px #aaaaaa solid;
 	font-size: x-large;
 }
 td.hcorr {
-        width: 100px;
-        height: 40px;
+        width: 70px;
+        height: 30px;
 }
 td.vcorr {
-        width: 40px;
-        height: 100px;
+        width: 30px;
+        height: 70px;
 }
 td.move:hover {
         background-color: #ccffff;
@@ -31,5 +31,5 @@ td.com {
         background-color: #cc99cc;
 }
 button {
-	font-size: x-large;
+	font-size: xx-large;
 }
