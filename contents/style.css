@@ -13,9 +13,6 @@ td.room {
         border: 2px #aaaaaa solid;
 	font-size: x-large;
 }
-p {
-	font-size: x-large;
-}
 td.hcorr {
         width: 100px;
         height: 40px;
@@ -32,4 +29,7 @@ td.player {
 }
 td.com {
         background-color: #cc99cc;
+}
+button {
+	font-size: x-large;
 }

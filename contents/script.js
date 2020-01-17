@@ -6,6 +6,8 @@ var corr = [];
 var you = {"nowon":"42", "move":[]};
 var com = {"nowon":"02", "move":[]};
 var board = {};
+var undoboard = null;
+var gameinit = false;
 
 function addattr(element) {
 	element.setAttribute("onmouseover", "mouseover(this)");
@@ -56,10 +58,63 @@ function quoridor_data(res)
 	updatecom(String(res.board.comPos.y) + String(res.board.comPos.x));
 	updatemove();
 	board = res.board;
+
+	document.getElementById("undobtn").disabled = (undoboard == null);
+	document.getElementById("comfirstbtn").disabled = !gameinit;
+	gameinit = false;
+}
+
+function comfirst() {
+	request_quoridor_data({action:"Com", board:board});
+}
+
+function undocopy() {
+	var str = JSON.stringify(board);
+	undoboard = JSON.parse(str);
+}
+
+function undo() {
+	if (undoboard == null) return;
+	// poles
+	for (var i = 0; i < board.poles.length; i++) {
+		var undo = true;
+		for (var j = 0; j < undoboard.poles.length; j++) {
+			if (board.poles[i].x == undoboard.poles[j].x && board.poles[i].y == undoboard.poles[j].y) {
+				undo = false;
+				break;
+			}
+		}
+		if (undo) {
+			unbuildpole(board.poles[i])
+		}
+	}
+	// blockings
+	for (var i = 0; i < board.blockings.length; i++) {
+		var undo = true;
+		for (var j = 0; j < undoboard.blockings.length; j++) {
+			if (board.blockings[i][0].x == undoboard.blockings[j][0].x
+			 && board.blockings[i][0].y == undoboard.blockings[j][0].y
+			 && board.blockings[i][1].x == undoboard.blockings[j][1].x
+			 && board.blockings[i][1].y == undoboard.blockings[j][1].y) {
+				undo = false;
+				break;
+			}
+		}
+		if (undo) {
+			unbuildblock(board.blockings[i]);
+		}
+	}
+
+	updateyou(String(undoboard.playerPos.y) + String(undoboard.playerPos.x));
+	updatecom(String(undoboard.comPos.y) + String(undoboard.comPos.x));
+	updatemove();
+	board = undoboard;
+	undoboard = null;
 }
 
 function start() {
-	draw_board()
+	gameinit = true;
+	draw_board();
 	request_quoridor_data({action:"Init", board:{dimension:dim}});
 }
 
@@ -197,6 +252,7 @@ function mouseclick(element) {
 }
 
 function writewall(wallparts) {
+	undocopy();
 	wallparts.forEach( function(val) {
 		if (val.startsWith("pole")) {
 			board.poles.push({y:parseInt(val.substr(4, 1)), x:parseInt(val.substr(5,1))});
@@ -241,6 +297,18 @@ function buildblock(block) {
 	blockid = "corr" + String(block[0].y) + String(block[0].x) + ":" + String(block[1].y) + String(block[1].x);
 	document.getElementById(blockid).classList.add("built");
 	setbg(document.getElementById(blockid), "#444444");
+}
+
+function unbuildpole(pole) {
+	poleid = "pole" + String(pole.y) + String(pole.x);
+	document.getElementById(poleid).classList.remove("built");
+	setbg(document.getElementById(poleid), "#ffffff");
+}
+
+function unbuildblock(block) {
+	blockid = "corr" + String(block[0].y) + String(block[0].x) + ":" + String(block[1].y) + String(block[1].x);
+	document.getElementById(blockid).classList.remove("built");
+	setbg(document.getElementById(blockid), "#ffffff");
 }
 
 // Room UI functions
@@ -307,6 +375,7 @@ function roommouseclick(element) {
 	for (i = 0; i < you["move"].length; i++) {
 		if (element.id == you["move"][i]) {
 			updateyou(element.id);
+			undocopy();
 			board.playerPos = {y:parseInt(element.id.substr(0, 1)), x:parseInt(element.id.substr(1, 1))}
 			request_quoridor_data({action:"Com", board:board});
 			return;
