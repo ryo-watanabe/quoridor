@@ -49,12 +49,13 @@ function quoridor_data(res)
 	} else {
 		res.board.blockings = [];
 	}
+	// walls left
+	document.getElementById("walls").innerHTML = " / Walls left com:" + res.board.comWalls + " player:" + res.board.playerWalls;
 
 	updateyou(String(res.board.playerPos.y) + String(res.board.playerPos.x));
 	updatecom(String(res.board.comPos.y) + String(res.board.comPos.x));
 	updatemove();
 	board = res.board;
-	document.getElementById("status").innerHTML = res.status;
 }
 
 function start() {
@@ -183,6 +184,7 @@ function isbuilt(wallparts) {
 }
 
 function mouseclick(element) {
+	if (board.playerWalls <= 0) return
 	if (wall[element.id] && !isbuilt(wall[element.id])) {
 		wall[element.id].forEach( function(value) { document.getElementById(value).classList.add("built"); });
 		drawwall(wall[element.id], "#444444");
@@ -203,10 +205,12 @@ function writewall(wallparts) {
 			board.blockings.push([{y:parseInt(val.substr(4, 1)), x:parseInt(val.substr(5,1))}, {y:parseInt(val.substr(7, 1)), x:parseInt(val.substr(8,1))}]);
 		}
 	});
+	board.playerWalls--;
 	request_quoridor_data({action:"Com", board:board});
 }
 
 function mouseover(element) {
+	if (board.playerWalls <= 0) return
 	if (wall[element.id] && !isbuilt(wall[element.id])) {
 		drawwall(wall[element.id], "#cccccc");
 	} else if (altwall[element.id] && !isbuilt(altwall[element.id])) {
@@ -215,6 +219,7 @@ function mouseover(element) {
 }
 
 function mouseout(element) {
+	if (board.playerWalls <= 0) return
 	if (wall[element.id] && !isbuilt(wall[element.id])) {
 		drawwall(wall[element.id], "#ffffff");
 	} else if (altwall[element.id] && !isbuilt(altwall[element.id])) {
