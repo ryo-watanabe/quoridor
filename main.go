@@ -59,8 +59,8 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 		bestMoveEval := -100
 		bestMoveIndex := -1
 		for index, m := range(moves) {
-			com, com_ok := shortestRoute(ret.Board, m, ret.Board.Dimension-1, max)
-			player, player_ok := shortestRoute(ret.Board, ret.Board.PlayerPos, 0, max)
+			com, com_ok := shortestTreeRoute(ret.Board, m, ret.Board.Dimension-1, max)
+			player, player_ok := shortestTreeRoute(ret.Board, ret.Board.PlayerPos, 0, max)
 			if !com_ok || !player_ok {
 				continue
 			}
@@ -78,8 +78,8 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 				testboard.Poles = append(testboard.Poles, w.Pole)
 				testboard.Blockings = append(testboard.Blockings, w.Blockings...)
 
-				com, com_ok := shortestRoute(testboard, testboard.ComPos, testboard.Dimension-1, max)
-				player, player_ok := shortestRoute(testboard, testboard.PlayerPos, 0, max)
+				com, com_ok := shortestTreeRoute(testboard, testboard.ComPos, testboard.Dimension-1, max)
+				player, player_ok := shortestTreeRoute(testboard, testboard.PlayerPos, 0, max)
 				if !com_ok || !player_ok {
 					continue
 				}
