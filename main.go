@@ -25,6 +25,14 @@ type QuoridorResponse struct {
 	Message string	`json:"message,omitempty"`
 }
 
+func eval(player, com int) int {
+	// simple:
+	//return player - com
+
+	// player route weight
+	return 100*(player - com) + player
+}
+
 func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 	if req.Action == "Init" {
 		err := initBoard(req, ret)
@@ -58,7 +66,7 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 
 		max := maxRoute(ret.Board)
 
-		bestMoveEval := -100
+		bestMoveEval := -10000
 		bestMoveIndex := -1
 		for index, m := range(moves) {
 			com, com_ok := shortestTreeRoute(ret.Board, m, ret.Board.Dimension-1, max)
@@ -66,13 +74,13 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 			if !com_ok || !player_ok {
 				continue
 			}
-			if player - com > bestMoveEval {
-				bestMoveEval = player - com
+			if eval(player, com) > bestMoveEval {
+				bestMoveEval = eval(player, com)
 				bestMoveIndex = index
 			}
 		}
 
-		bestWallEval := -100
+		bestWallEval := -10000
 		bestWallIndex := -1
 		if ret.Board.ComWalls > 0 {
 			for index, w := range(walls) {
@@ -85,8 +93,8 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 				if !com_ok || !player_ok {
 					continue
 				}
-				if player - com > bestWallEval {
-					bestWallEval = player - com
+				if eval(player, com) > bestWallEval {
+					bestWallEval = eval(player, com)
 					bestWallIndex = index
 				}
 			}
