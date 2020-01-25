@@ -1,6 +1,13 @@
+html {
+	text-align: center;
+	font-size: 2vw;
+}
+h1.title {
+	font-size: 300%;
+}
 table {
         border-collapse: collapse;
-        margin: 10px;
+        margin: 0 auto;
 }
 td {
         padding: 0;
@@ -31,5 +38,5 @@ td.com {
         background-color: #cc99cc;
 }
 button {
-	font-size: xx-large;
+	font-size: 100%;
 }

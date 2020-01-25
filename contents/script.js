@@ -8,6 +8,7 @@ var com = {"nowon":"02", "move":[]};
 var board = {};
 var undoboard = null;
 var gameinit = false;
+var playable = true;
 
 function addattr(element) {
 	element.setAttribute("onmouseover", "mouseover(this)");
@@ -32,9 +33,7 @@ function quoridor_data(res)
 	} else {
 		document.getElementById("message").innerHTML = "";
 	}
-	if (res.status != "OK") {
-		return;
-	}
+	if (res.status == "NG") return;
 	// poles
 	if (res.board.poles) {
 		for (var i = 0; i < res.board.poles.length; i++) {
@@ -54,10 +53,24 @@ function quoridor_data(res)
 	// walls left
 	document.getElementById("walls").innerHTML = "Walls left com:" + res.board.comWalls + " player:" + res.board.playerWalls;
 
+	if (res.status == "COM") {
+		for (j = 0; j < dim; j++) {
+			roomid = String(dim - 1) + String(j);
+			setbg(document.getElementById(roomid), "#ffccff");
+		}
+	}
+	if (res.status == "PLY") {
+		for (j = 0; j < dim; j++) {
+			roomid = String(0) + String(j);
+			setbg(document.getElementById(roomid), "#ccffff");
+		}
+	}
+
 	updateyou(String(res.board.playerPos.y) + String(res.board.playerPos.x));
 	updatecom(String(res.board.comPos.y) + String(res.board.comPos.x));
 	updatemove();
 	board = res.board;
+	if (res.status == "OK")	playable = true;
 
 	document.getElementById("undobtn").disabled = (undoboard == null);
 	document.getElementById("comfirstbtn").disabled = !gameinit;
@@ -76,6 +89,8 @@ function undocopy() {
 
 function undo() {
 	if (undoboard == null) return;
+
+	/*
 	// poles
 	for (var i = 0; i < board.poles.length; i++) {
 		var undo = true;
@@ -105,12 +120,35 @@ function undo() {
 			unbuildblock(board.blockings[i]);
 		}
 	}
+	// undo from COM/PLY
+	for (j = 0; j < dim; j++) {
+		roomid = String(dim - 1) + String(j);
+		setbg(document.getElementById(roomid), "#ffffff");
+	}
+	for (j = 0; j < dim; j++) {
+		roomid = String(0) + String(j);
+		setbg(document.getElementById(roomid), "#ffffff");
+	}
+	*/
+	draw_board();
+	// poles
+	for (var i = 0; i < undoboard.poles.length; i++) {
+		buildpole(undoboard.poles[i]);
+	}
+	// blockings
+	for (var i = 0; i < undoboard.blockings.length; i++) {
+		buildblock(undoboard.blockings[i]);
+	}
+	// walls left
+	document.getElementById("walls").innerHTML = "Walls left com:" + undoboard.comWalls + " player:" + undoboard.playerWalls;
 
 	updateyou(String(undoboard.playerPos.y) + String(undoboard.playerPos.x));
 	updatecom(String(undoboard.comPos.y) + String(undoboard.comPos.x));
 	updatemove();
+	playable = true;
 	board = undoboard;
 	undoboard = null;
+	document.getElementById("undobtn").disabled = (undoboard == null);
 }
 
 function newgame(dimension) {
@@ -255,7 +293,8 @@ function isbuilt(wallparts) {
 }
 
 function mouseclick(element) {
-	if (board.playerWalls <= 0) return
+	if (!playable) return;
+	if (board.playerWalls <= 0) return;
 	if (wall[element.id] && !isbuilt(wall[element.id])) {
 		wall[element.id].forEach( function(value) { document.getElementById(value).classList.add("built"); });
 		drawwall(wall[element.id], "#444444");
@@ -279,10 +318,12 @@ function writewall(wallparts) {
 		}
 	});
 	board.playerWalls--;
+	playable = false;
 	request_quoridor_data({action:"Com", board:board});
 }
 
 function mouseover(element) {
+	if (!playable) return;
 	if (board.playerWalls <= 0) return
 	if (wall[element.id] && !isbuilt(wall[element.id])) {
 		drawwall(wall[element.id], "#cccccc");
@@ -292,6 +333,7 @@ function mouseover(element) {
 }
 
 function mouseout(element) {
+	if (!playable) return;
 	if (board.playerWalls <= 0) return
 	if (wall[element.id] && !isbuilt(wall[element.id])) {
 		drawwall(wall[element.id], "#ffffff");
@@ -389,12 +431,14 @@ function updatemove() {
 }
 
 function roommouseclick(element) {
+	if (!playable) return;
 	for (i = 0; i < you["move"].length; i++) {
 		if (element.id == you["move"][i]) {
 			updateyou(element.id);
 			undocopy();
 			gameinit = false;
 			board.playerPos = {y:parseInt(element.id.substr(0, 1)), x:parseInt(element.id.substr(1, 1))}
+			playable = false;
 			request_quoridor_data({action:"Com", board:board});
 			return;
 		}

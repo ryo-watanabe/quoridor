@@ -39,6 +39,7 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 		// player won
 		if ret.Board.PlayerPos.Y == 0 {
 			ret.Message = "Player won"
+			ret.Status = "PLY"
 			return nil
 		}
 
@@ -48,6 +49,7 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 			if m.Y == ret.Board.Dimension-1 {
 				ret.Board.ComPos = m
 				ret.Message = "Com won"
+				ret.Status = "COM"
 				return nil
 			}
 		}
