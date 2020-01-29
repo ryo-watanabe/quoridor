@@ -14,6 +14,14 @@ import (
 	"time"
 )
 
+type QuoridorEvaluation struct {
+	Eval int   `json:"eval"`
+	PlayerSteps int   `json:"playerSteps"`
+	ComSteps int   `json:"comSteps"`
+	BestMoveEval int   `json:"bestMoveEval"`
+	BestWallEval int   `json:"bestWallEval"`
+}
+
 type QuoridorRequest struct {
 	Action string	`json:"action"`
 	Board *QuoridorBoard	`json:"board,omitempty"`
@@ -23,6 +31,7 @@ type QuoridorResponse struct {
 	Status string	`json:"status"`
 	Board *QuoridorBoard	`json:"board,omitempty"`
 	Message string	`json:"message,omitempty"`
+	Evaluation *QuoridorEvaluation   `json:"evaluation"`
 }
 
 func eval(player, com int) int {
@@ -68,6 +77,8 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 
 		bestMoveEval := -10000
 		bestMoveIndex := -1
+		bestMovePlayerSteps := -1
+		bestMoveComSteps := -1
 		for index, m := range(moves) {
 			com, com_ok := shortestTreeRoute(ret.Board, m, ret.Board.Dimension-1, max)
 			player, player_ok := shortestTreeRoute(ret.Board, ret.Board.PlayerPos, 0, max)
@@ -77,11 +88,15 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 			if eval(player, com) > bestMoveEval {
 				bestMoveEval = eval(player, com)
 				bestMoveIndex = index
+				bestMovePlayerSteps = player
+				bestMoveComSteps = com
 			}
 		}
 
 		bestWallEval := -10000
 		bestWallIndex := -1
+		bestWallPlayerSteps := -1
+		bestWallComSteps := -1
 		if ret.Board.ComWalls > 0 {
 			for index, w := range(walls) {
 				testboard := ret.Board.Copy()
@@ -96,6 +111,8 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 				if eval(player, com) > bestWallEval {
 					bestWallEval = eval(player, com)
 					bestWallIndex = index
+					bestWallPlayerSteps = player
+					bestWallComSteps = com
 				}
 			}
 		}
@@ -108,8 +125,22 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 			ret.Board.Poles = append(ret.Board.Poles, wall.Pole)
 			ret.Board.Blockings = append(ret.Board.Blockings, wall.Blockings...)
 			ret.Board.ComWalls--;
+			ret.Evaluation = &QuoridorEvaluation{
+				Eval: bestWallEval,
+				PlayerSteps: bestWallPlayerSteps,
+				ComSteps: bestWallComSteps,
+				BestMoveEval: bestMoveEval,
+				BestWallEval: bestWallEval,
+			}
 		} else {
 			ret.Board.ComPos = moves[bestMoveIndex]
+			ret.Evaluation = &QuoridorEvaluation{
+				Eval: bestMoveEval,
+				PlayerSteps: bestMovePlayerSteps,
+				ComSteps: bestMoveComSteps,
+				BestMoveEval: bestMoveEval,
+				BestWallEval: bestWallEval,
+			}
 		}
 		return nil
 	}

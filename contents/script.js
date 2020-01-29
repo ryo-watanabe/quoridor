@@ -33,6 +33,13 @@ function quoridor_data(res)
 	} else {
 		document.getElementById("message").innerHTML = "";
 	}
+	if (res.evaluation) {
+		document.getElementById("eval").innerHTML = "eval:" + res.evaluation.eval +
+		 " / player:" + res.evaluation.playerSteps + " / com:" + res.evaluation.comSteps +
+		 " / move:" + res.evaluation.bestMoveEval + " / wall:" + res.evaluation.bestWallEval;
+	} else {
+		document.getElementById("eval").innerHTML = "";
+	}
 	if (res.status == "NG") return;
 	// poles
 	if (res.board.poles) {
