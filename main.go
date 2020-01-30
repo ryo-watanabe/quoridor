@@ -18,8 +18,8 @@ type QuoridorEvaluation struct {
 	Eval int   `json:"eval"`
 	PlayerSteps int   `json:"playerSteps"`
 	ComSteps int   `json:"comSteps"`
-	BestMoveEval int   `json:"bestMoveEval"`
-	BestWallEval int   `json:"bestWallEval"`
+	LookForward int   `json:"lookForward"`
+	NumCases int   `json:"numCases"`
 }
 
 type QuoridorRequest struct {
@@ -42,6 +42,140 @@ func eval(player, com int) int {
 	return 100*(player - com) + player
 }
 
+type turn struct {
+	comMove *position
+	playerMove *position
+	wall *wall
+}
+
+type boardCase struct {
+	turns []turn
+	eval int
+}
+
+func (c *boardCase)appliedBorad(board *QuoridorBoard) *QuoridorBoard {
+	b := board.Copy()
+	for _, t := range(c.turns) {
+		if t.comMove != nil {
+			b.ComPos = *t.comMove
+		}
+		if t.playerMove != nil {
+			b.PlayerPos = *t.playerMove
+		}
+		if t.wall != nil {
+			b.Poles = append(b.Poles, t.wall.Pole)
+			b.Blockings = append(b.Blockings, t.wall.Blockings...)
+		}
+	}
+	return b
+}
+
+func compute(ret *QuoridorResponse, maxCases int) error {
+
+	// 1st com turn
+	cases := make([]boardCase,0)
+	moves := possibleComMoves(ret.Board)
+	for _, m := range(moves) {
+		t := make([]turn, 0)
+		t = append(t, turn{comMove:&m})
+		cases = append(cases, boardCase{turns:t})
+	}
+	walls := possibleWalls(ret.Board)
+	for _, w := range(walls) {
+		t := make([]turn, 0)
+		t = append(t, turn{wall:&w})
+		cases = append(cases, boardCase{turns:t})
+	}
+
+	// 2nd player turn, and more...
+	nextturn := true
+	lookForward := 1
+	newCases := make([]boardCase, 0)
+	for nextturn {
+		for _, c := range(cases) {
+			b := c.appliedBorad(ret.Board)
+			if lookForward % 2 != 0 {
+				moves := possiblePlayerMoves(b)
+				for _, m := range(moves) {
+					t := make([]turn, 0)
+					t = append(t, c.turns...)
+					t = append(t, turn{playerMove:&m})
+					newCases = append(newCases, boardCase{turns:t})
+				}
+			} else {
+				moves := possibleComMoves(b)
+				for _, m := range(moves) {
+					t := make([]turn, 0)
+					t = append(t, c.turns...)
+					t = append(t, turn{comMove:&m})
+					newCases = append(newCases, boardCase{turns:t})
+				}
+			}
+			walls := possibleWalls(b)
+			for _, w := range(walls) {
+				t := make([]turn, 0)
+				t = append(t, c.turns...)
+				t = append(t, turn{wall:&w})
+				newCases = append(newCases, boardCase{turns:t})
+			}
+		}
+		if len(newCases) < maxCases {
+			cases = make([]boardCase, 0)
+			cases = append(cases, newCases...)
+			lookForward++
+		} else {
+			nextturn = false
+		}
+		newCases = make([]boardCase, 0)
+	}
+
+	// Evaluation
+	bestIndex := -1
+	bestEval := -10000
+	bestPlayerSteps := -1
+	bestComSteps := -1
+	max := maxRoute(ret.Board)
+	for index, c := range(cases) {
+		b := c.appliedBorad(ret.Board)
+		com, com_ok := shortestTreeRoute(b, b.ComPos, ret.Board.Dimension-1, max)
+		player, player_ok := shortestTreeRoute(b, b.PlayerPos, 0, max)
+		if com_ok && player_ok {
+			c.eval = eval(player, com)
+			if c.eval > bestEval {
+				bestEval = c.eval
+				bestIndex = index
+				bestPlayerSteps = player
+				bestComSteps = com
+			}
+		}
+	}
+	if bestIndex < 0 {
+		return fmt.Errorf("No possible move/wall")
+	}
+
+	// Set board
+	if cases[bestIndex].turns[0].wall != nil {
+		wall := cases[bestIndex].turns[0].wall
+		ret.Board.Poles = append(ret.Board.Poles, wall.Pole)
+		ret.Board.Blockings = append(ret.Board.Blockings, wall.Blockings...)
+		ret.Board.ComWalls--;
+	} else if cases[bestIndex].turns[0].comMove != nil {
+		ret.Board.ComPos = *cases[bestIndex].turns[0].comMove
+	} else {
+		return fmt.Errorf("Compute error")
+	}
+
+	// Set debug values
+	ret.Evaluation = &QuoridorEvaluation{
+		Eval: bestEval,
+		PlayerSteps: bestPlayerSteps,
+		ComSteps: bestComSteps,
+		LookForward: lookForward,
+		NumCases: len(cases),
+	}
+	return nil
+}
+
 func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 	if req.Action == "Init" {
 		err := initBoard(req, ret)
@@ -61,7 +195,7 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 		}
 
 		// computer won
-		moves := possibleMoves(ret.Board)
+		moves := possibleComMoves(ret.Board)
 		for _, m := range(moves) {
 			if m.Y == ret.Board.Dimension-1 {
 				ret.Board.ComPos = m
@@ -71,6 +205,7 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 			}
 		}
 
+		/*
 		walls := possibleWalls(ret.Board)
 
 		max := maxRoute(ret.Board)
@@ -143,11 +278,14 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 			}
 		}
 		return nil
+		*/
+
+		return compute(ret, 5000)
 	}
 	if req.Action == "Rand" {
 		ret.Board = req.Board
 		rand.Seed(time.Now().UnixNano())
-		moves := possibleMoves(ret.Board)
+		moves := possibleComMoves(ret.Board)
 		walls := possibleWalls(ret.Board)
 		if rand.Intn(2) == 0 && len(moves) > 0 {
 			ret.Board.ComPos = moves[rand.Intn(len(moves))]

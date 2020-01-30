@@ -88,7 +88,7 @@ func possibleMovesFrom(pos position, board *QuoridorBoard) []position {
 	return moves
 }
 
-func possibleMoves(board *QuoridorBoard) []position {
+func possibleComMoves(board *QuoridorBoard) []position {
 	moves := make([]position, 0)
 	comMoves := possibleMovesFrom(board.ComPos, board)
 	for _, m := range(comMoves) {
@@ -97,6 +97,25 @@ func possibleMoves(board *QuoridorBoard) []position {
 			playerMoves := possibleMovesFrom(m, board)
 			for _, pm := range(playerMoves) {
 				if !pm.Equals(board.ComPos) {
+					moves = append(moves, pm)
+				}
+			}
+		} else {
+			moves = append(moves, m)
+		}
+	}
+	return moves
+}
+
+func possiblePlayerMoves(board *QuoridorBoard) []position {
+	moves := make([]position, 0)
+	playerMoves := possibleMovesFrom(board.PlayerPos, board)
+	for _, m := range(playerMoves) {
+		// Jump over com pos
+		if m.Equals(board.ComPos) {
+			comMoves := possibleMovesFrom(m, board)
+			for _, pm := range(comMoves) {
+				if !pm.Equals(board.PlayerPos) {
 					moves = append(moves, pm)
 				}
 			}
