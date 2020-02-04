@@ -35,8 +35,9 @@ function quoridor_data(res)
 	}
 	if (res.evaluation) {
 		document.getElementById("eval").innerHTML = "eval:" + res.evaluation.eval +
-		 " / player:" + res.evaluation.playerSteps + " / com:" + res.evaluation.comSteps +
-		 " / move:" + res.evaluation.bestMoveEval + " / wall:" + res.evaluation.bestWallEval;
+		 " / player eval:" + res.evaluation.nextPlayerEval +
+		 " / cases:" + res.evaluation.numCases +
+		 " / player cases:" + res.evaluation.numNextPlayerCases;
 	} else {
 		document.getElementById("eval").innerHTML = "";
 	}

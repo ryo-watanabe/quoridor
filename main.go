@@ -16,10 +16,9 @@ import (
 
 type QuoridorEvaluation struct {
 	Eval int   `json:"eval"`
-	PlayerSteps int   `json:"playerSteps"`
-	ComSteps int   `json:"comSteps"`
-	LookForward int   `json:"lookForward"`
+	NextPlayerEval int   `json:"nextPlayerEval"`
 	NumCases int   `json:"numCases"`
+	NumNextPlayerCases int   `json:"numNextPlayerCases"`
 }
 
 type QuoridorRequest struct {
@@ -36,10 +35,10 @@ type QuoridorResponse struct {
 
 func eval(player, com int) int {
 	// simple:
-	//return player - com
+	return player - com
 
 	// player route weight
-	return 100*(player - com) + player
+	//return 100*(player - com) + player
 }
 
 type turn struct {
@@ -49,129 +48,160 @@ type turn struct {
 }
 
 type boardCase struct {
-	turns []turn
+	turn turn
 	eval int
+	prev *boardCase
+	nextEval int
+	com int
+	player int
 }
 
 func (c *boardCase)appliedBorad(board *QuoridorBoard) *QuoridorBoard {
-	b := board.Copy()
-	for _, t := range(c.turns) {
-		if t.comMove != nil {
-			b.ComPos = *t.comMove
-		}
-		if t.playerMove != nil {
-			b.PlayerPos = *t.playerMove
-		}
-		if t.wall != nil {
-			b.Poles = append(b.Poles, t.wall.Pole)
-			b.Blockings = append(b.Blockings, t.wall.Blockings...)
-		}
+	var b *QuoridorBoard
+	if c.prev != nil {
+		b = c.prev.appliedBorad(board)
+	} else {
+		b = board.Copy()
+	}
+	if c.turn.comMove != nil {
+		b.ComPos = *c.turn.comMove
+	}
+	if c.turn.playerMove != nil {
+		b.PlayerPos = *c.turn.playerMove
+	}
+	if c.turn.wall != nil {
+		b.Poles = append(b.Poles, c.turn.wall.Pole)
+		b.Blockings = append(b.Blockings, c.turn.wall.Blockings...)
 	}
 	return b
 }
 
-func compute(ret *QuoridorResponse, maxCases int) error {
+func compute(ret *QuoridorResponse, careNext bool) error {
+
+	max := maxRoute(ret.Board)
 
 	// 1st com turn
 	cases := make([]boardCase,0)
 	moves := possibleComMoves(ret.Board)
-	for _, m := range(moves) {
-		t := make([]turn, 0)
-		t = append(t, turn{comMove:&m})
-		cases = append(cases, boardCase{turns:t})
+	for i := 0; i < len(moves); i++ {
+		cases = append(cases, boardCase{turn:turn{playerMove:nil,comMove:&moves[i],wall:nil},eval:-10000,nextEval:-10000,prev:nil})
 	}
-	walls := possibleWalls(ret.Board)
-	for _, w := range(walls) {
-		t := make([]turn, 0)
-		t = append(t, turn{wall:&w})
-		cases = append(cases, boardCase{turns:t})
+	if ret.Board.ComWalls > 0 {
+		walls := possibleWalls(ret.Board)
+		for i := 0; i < len(walls); i++ {
+			cases = append(cases, boardCase{turn:turn{playerMove:nil,comMove:nil,wall:&walls[i]},eval:-10000,nextEval:-10000,prev:nil})
+		}
 	}
 
-	// 2nd player turn, and more...
-	nextturn := true
-	lookForward := 1
-	newCases := make([]boardCase, 0)
-	for nextturn {
-		for _, c := range(cases) {
-			b := c.appliedBorad(ret.Board)
-			if lookForward % 2 != 0 {
-				moves := possiblePlayerMoves(b)
-				for _, m := range(moves) {
-					t := make([]turn, 0)
-					t = append(t, c.turns...)
-					t = append(t, turn{playerMove:&m})
-					newCases = append(newCases, boardCase{turns:t})
-				}
-			} else {
-				moves := possibleComMoves(b)
-				for _, m := range(moves) {
-					t := make([]turn, 0)
-					t = append(t, c.turns...)
-					t = append(t, turn{comMove:&m})
-					newCases = append(newCases, boardCase{turns:t})
-				}
-			}
-			walls := possibleWalls(b)
-			for _, w := range(walls) {
-				t := make([]turn, 0)
-				t = append(t, c.turns...)
-				t = append(t, turn{wall:&w})
-				newCases = append(newCases, boardCase{turns:t})
-			}
-		}
-		if len(newCases) < maxCases {
-			cases = make([]boardCase, 0)
-			cases = append(cases, newCases...)
-			lookForward++
-		} else {
-			nextturn = false
-		}
-		newCases = make([]boardCase, 0)
-	}
-
-	// Evaluation
-	bestIndex := -1
-	bestEval := -10000
-	bestPlayerSteps := -1
-	bestComSteps := -1
-	max := maxRoute(ret.Board)
-	for index, c := range(cases) {
-		b := c.appliedBorad(ret.Board)
+	// evaluate
+	bestEvalFirst := -10000
+	bestIndexFirst := -1
+	numBestCases := 0
+	for i := 0; i < len(cases); i++ {
+		b := cases[i].appliedBorad(ret.Board)
 		com, com_ok := shortestTreeRoute(b, b.ComPos, ret.Board.Dimension-1, max)
 		player, player_ok := shortestTreeRoute(b, b.PlayerPos, 0, max)
 		if com_ok && player_ok {
-			c.eval = eval(player, com)
-			if c.eval > bestEval {
-				bestEval = c.eval
-				bestIndex = index
-				bestPlayerSteps = player
-				bestComSteps = com
-			}
+			cases[i].eval = eval(player, com)
+			cases[i].com = com
+			cases[i].player = player
+		}
+		if cases[i].eval > bestEvalFirst {
+			bestEvalFirst = cases[i].eval
+			bestIndexFirst = i
+			numBestCases = 1
+		} else if cases[i].eval == bestEvalFirst {
+			numBestCases++
 		}
 	}
-	if bestIndex < 0 {
+	if bestIndexFirst < 0 {
 		return fmt.Errorf("No possible move/wall")
 	}
 
+	if !careNext {
+		// Set board
+		if cases[bestIndexFirst].turn.wall != nil {
+			wall := cases[bestIndexFirst].turn.wall
+			ret.Board.Poles = append(ret.Board.Poles, wall.Pole)
+			ret.Board.Blockings = append(ret.Board.Blockings, wall.Blockings...)
+			ret.Board.ComWalls--;
+		} else if cases[bestIndexFirst].turn.comMove != nil {
+			ret.Board.ComPos = *cases[bestIndexFirst].turn.comMove
+		} else {
+			return fmt.Errorf("Compute error")
+		}
+
+		// Set debug values
+		ret.Evaluation = &QuoridorEvaluation{
+			Eval: bestEvalFirst,
+			NumCases: numBestCases,
+		}
+		return nil
+	}
+
+	// 2nd player turn
+	newCases := make([]boardCase, 0)
+	numBestCases = 0
+	for i := 0; i < len(cases); i++ {
+		if cases[i].eval < bestEvalFirst {
+			continue
+		}
+		numBestCases++
+		b := cases[i].appliedBorad(ret.Board)
+		moves := possiblePlayerMoves(b)
+		for j := 0; j < len(moves); j++ {
+			newCases = append(newCases, boardCase{turn:turn{playerMove:&moves[j]},eval:-10000,nextEval:-10000,prev:&cases[i]})
+		}
+		if ret.Board.PlayerWalls > 0 {
+			walls := possibleWalls(b)
+			for j := 0; j < len(walls); j++ {
+				newCases = append(newCases, boardCase{turn:turn{wall:&walls[j]},eval:-10000,nextEval:-10000,prev:&cases[i]})
+			}
+		}
+	}
+
+	// Evaluation
+	for i := 0; i < len(newCases); i++ {
+		b := newCases[i].appliedBorad(ret.Board)
+		com, com_ok := shortestTreeRoute(b, b.ComPos, ret.Board.Dimension-1, max)
+		player, player_ok := shortestTreeRoute(b, b.PlayerPos, 0, max)
+		if com_ok && player_ok {
+			newCases[i].eval = eval(com, player)
+			if newCases[i].eval > newCases[i].prev.nextEval {
+				newCases[i].prev.nextEval = newCases[i].eval
+			}
+		}
+	}
+	bestIndex := -1
+	bestEval := 10000
+	for index, c := range(cases) {
+		if c.nextEval > -10000 && c.nextEval < bestEval {
+			bestEval = c.nextEval
+			bestIndex = index
+		}
+	}
+	if bestIndex < 0 {
+		return fmt.Errorf("No best move/wall")
+	}
+
 	// Set board
-	if cases[bestIndex].turns[0].wall != nil {
-		wall := cases[bestIndex].turns[0].wall
+	if cases[bestIndex].turn.wall != nil {
+		wall := cases[bestIndex].turn.wall
 		ret.Board.Poles = append(ret.Board.Poles, wall.Pole)
 		ret.Board.Blockings = append(ret.Board.Blockings, wall.Blockings...)
 		ret.Board.ComWalls--;
-	} else if cases[bestIndex].turns[0].comMove != nil {
-		ret.Board.ComPos = *cases[bestIndex].turns[0].comMove
+	} else if cases[bestIndex].turn.comMove != nil {
+		ret.Board.ComPos = *cases[bestIndex].turn.comMove
 	} else {
 		return fmt.Errorf("Compute error")
 	}
 
 	// Set debug values
 	ret.Evaluation = &QuoridorEvaluation{
-		Eval: bestEval,
-		PlayerSteps: bestPlayerSteps,
-		ComSteps: bestComSteps,
-		LookForward: lookForward,
-		NumCases: len(cases),
+		Eval: bestEvalFirst,
+		NextPlayerEval: bestEval,
+		NumCases: numBestCases,
+		NumNextPlayerCases: len(newCases),
 	}
 	return nil
 }
@@ -205,82 +235,8 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 			}
 		}
 
-		/*
-		walls := possibleWalls(ret.Board)
-
-		max := maxRoute(ret.Board)
-
-		bestMoveEval := -10000
-		bestMoveIndex := -1
-		bestMovePlayerSteps := -1
-		bestMoveComSteps := -1
-		for index, m := range(moves) {
-			com, com_ok := shortestTreeRoute(ret.Board, m, ret.Board.Dimension-1, max)
-			player, player_ok := shortestTreeRoute(ret.Board, ret.Board.PlayerPos, 0, max)
-			if !com_ok || !player_ok {
-				continue
-			}
-			if eval(player, com) > bestMoveEval {
-				bestMoveEval = eval(player, com)
-				bestMoveIndex = index
-				bestMovePlayerSteps = player
-				bestMoveComSteps = com
-			}
-		}
-
-		bestWallEval := -10000
-		bestWallIndex := -1
-		bestWallPlayerSteps := -1
-		bestWallComSteps := -1
-		if ret.Board.ComWalls > 0 {
-			for index, w := range(walls) {
-				testboard := ret.Board.Copy()
-				testboard.Poles = append(testboard.Poles, w.Pole)
-				testboard.Blockings = append(testboard.Blockings, w.Blockings...)
-
-				com, com_ok := shortestTreeRoute(testboard, testboard.ComPos, testboard.Dimension-1, max)
-				player, player_ok := shortestTreeRoute(testboard, testboard.PlayerPos, 0, max)
-				if !com_ok || !player_ok {
-					continue
-				}
-				if eval(player, com) > bestWallEval {
-					bestWallEval = eval(player, com)
-					bestWallIndex = index
-					bestWallPlayerSteps = player
-					bestWallComSteps = com
-				}
-			}
-		}
-
-		if bestWallIndex < 0 && bestMoveIndex < 0 {
-			return fmt.Errorf("No possible move/wall")
-		}
-		if bestWallIndex >= 0 && (bestMoveIndex < 0 || bestMoveEval < bestWallEval) {
-			wall := walls[bestWallIndex]
-			ret.Board.Poles = append(ret.Board.Poles, wall.Pole)
-			ret.Board.Blockings = append(ret.Board.Blockings, wall.Blockings...)
-			ret.Board.ComWalls--;
-			ret.Evaluation = &QuoridorEvaluation{
-				Eval: bestWallEval,
-				PlayerSteps: bestWallPlayerSteps,
-				ComSteps: bestWallComSteps,
-				BestMoveEval: bestMoveEval,
-				BestWallEval: bestWallEval,
-			}
-		} else {
-			ret.Board.ComPos = moves[bestMoveIndex]
-			ret.Evaluation = &QuoridorEvaluation{
-				Eval: bestMoveEval,
-				PlayerSteps: bestMovePlayerSteps,
-				ComSteps: bestMoveComSteps,
-				BestMoveEval: bestMoveEval,
-				BestWallEval: bestWallEval,
-			}
-		}
-		return nil
-		*/
-
-		return compute(ret, 5000)
+		// compute
+		return compute(ret, true)
 	}
 	if req.Action == "Rand" {
 		ret.Board = req.Board
