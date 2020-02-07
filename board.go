@@ -172,6 +172,18 @@ func possibleWalls(board *QuoridorBoard) []wall {
 	return walls
 }
 
+func initWalls(dim int) int {
+	switch dim {
+	case 5:
+		return 4
+	case 7:
+		return 7
+	case 9:
+		return 10
+	}
+	return 0
+}
+
 func initBoard(req *QuoridorRequest, ret *QuoridorResponse) error {
 	dim := 5
 	if req.Board != nil && req.Board.Dimension != 0 {
@@ -185,8 +197,8 @@ func initBoard(req *QuoridorRequest, ret *QuoridorResponse) error {
 		Dimension: dim,
 		ComPos: position{Y:0, X:dim/2},
 		PlayerPos: position{Y:dim-1, X:dim/2},
-		ComWalls: (dim + 1)*(dim + 1)/10,
-		PlayerWalls: (dim + 1)*(dim + 1)/10,
+		ComWalls: initWalls(dim),
+		PlayerWalls: initWalls(dim),
 	}
 	return nil
 }

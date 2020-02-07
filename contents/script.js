@@ -80,7 +80,6 @@ function quoridor_data(res)
 	board = res.board;
 	if (res.status == "OK")	playable = true;
 
-	document.getElementById("undobtn").disabled = (undoboard == null);
 	document.getElementById("comfirstbtn").disabled = !gameinit;
 }
 
@@ -93,6 +92,7 @@ function comfirst() {
 function undocopy() {
 	var str = JSON.stringify(board);
 	undoboard = JSON.parse(str);
+	document.getElementById("undobtn").disabled = (undoboard == null);
 }
 
 function undo() {
