@@ -174,10 +174,14 @@ func compute(ret *QuoridorResponse, careNext bool) error {
 	}
 	bestIndex := -1
 	bestEval := 10000
+	numNextBestCases := 0
 	for index, c := range(cases) {
 		if c.nextEval > -10000 && c.nextEval < bestEval {
 			bestEval = c.nextEval
 			bestIndex = index
+			numNextBestCases = 1
+		} else if c.nextEval > -10000 && c.nextEval == bestEval {
+			numNextBestCases++
 		}
 	}
 	if bestIndex < 0 {
@@ -201,7 +205,7 @@ func compute(ret *QuoridorResponse, careNext bool) error {
 		Eval: bestEvalFirst,
 		NextPlayerEval: bestEval,
 		NumCases: numBestCases,
-		NumNextPlayerCases: len(newCases),
+		NumNextPlayerCases: numNextBestCases,
 	}
 	return nil
 }
