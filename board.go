@@ -42,6 +42,14 @@ func (b *QuoridorBoard)Copy() *QuoridorBoard {
 	return &board
 }
 
+func (b *QuoridorBoard)Print() {
+	fmt.Printf("Board dim:%d ply:%d/%d com:%d/%d ", b.Dimension, b.PlayerPos.X, b.PlayerPos.Y, b.ComPos.X, b.ComPos.Y)
+	for _, block := range(b.Blockings) {
+		fmt.Printf("%d/%d:%d/%d ", block[0].X, block[0].Y, block[1].X, block[1].Y)
+	}
+	fmt.Printf("\n")
+}
+
 func maxRoute(board *QuoridorBoard) int {
 	return board.Dimension*board.Dimension
 }

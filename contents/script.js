@@ -34,10 +34,10 @@ function quoridor_data(res)
 		document.getElementById("message").innerHTML = "";
 	}
 	if (res.evaluation) {
-		document.getElementById("eval").innerHTML = "eval:" + res.evaluation.eval +
-		 " / player eval:" + res.evaluation.nextPlayerEval +
-		 " / cases:" + res.evaluation.numCases +
-		 " / player cases:" + res.evaluation.numNextPlayerCases;
+		document.getElementById("eval").innerHTML = "eval:" + res.evaluation.eval;
+		// " / player eval:" + res.evaluation.nextPlayerEval +
+		// " / cases:" + res.evaluation.numCases +
+		// " / player cases:" + res.evaluation.numNextPlayerCases;
 	} else {
 		document.getElementById("eval").innerHTML = "";
 	}
