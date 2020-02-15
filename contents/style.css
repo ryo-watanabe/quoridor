@@ -1,9 +1,10 @@
 html {
 	text-align: center;
 	font-size: 2vw;
+	font-family: 'Orbitron', sans-serif;
 }
 h1.title {
-	font-size: 300%;
+	font-size: 500%;
 }
 table {
         border-collapse: collapse;
@@ -37,11 +38,9 @@ td.player {
 td.com {
         background-color: #cc99cc;
 }
-button {
-	font-size: 100%;
-}
-select {
-	font-size: 100%;
+button, input, select, textarea {
+  font-family : inherit;
+  font-size   : 100%;
 }
 span.eval {
 	font-size: 200%;
