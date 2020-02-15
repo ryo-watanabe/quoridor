@@ -34,13 +34,14 @@ function quoridor_data(res)
 		document.getElementById("message").innerHTML = "";
 	}
 	if (res.evaluation) {
-		document.getElementById("eval").innerHTML = "eval:" + res.evaluation.eval;
+		document.getElementById("eval").innerHTML = "eval:" + res.evaluation.eval + "%";
 		// " / player eval:" + res.evaluation.nextPlayerEval +
-		// " / cases:" + res.evaluation.numCases +
+		//" / route calc:" + res.evaluation.numCases;
 		// " / player cases:" + res.evaluation.numNextPlayerCases;
 	} else {
 		document.getElementById("eval").innerHTML = "";
 	}
+	document.getElementById("undobtn").disabled = (undoboard == null);
 	if (res.status == "NG") return;
 	// poles
 	if (res.board.poles) {
@@ -92,7 +93,6 @@ function comfirst() {
 function undocopy() {
 	var str = JSON.stringify(board);
 	undoboard = JSON.parse(str);
-	document.getElementById("undobtn").disabled = (undoboard == null);
 }
 
 function undo() {
@@ -327,6 +327,7 @@ function writewall(wallparts) {
 	});
 	board.playerWalls--;
 	playable = false;
+	document.getElementById("undobtn").disabled = true;
 	request_quoridor_data({action:"Com", board:board});
 }
 
@@ -447,6 +448,7 @@ function roommouseclick(element) {
 			gameinit = false;
 			board.playerPos = {y:parseInt(element.id.substr(0, 1)), x:parseInt(element.id.substr(1, 1))}
 			playable = false;
+			document.getElementById("undobtn").disabled = true;
 			request_quoridor_data({action:"Com", board:board});
 			return;
 		}

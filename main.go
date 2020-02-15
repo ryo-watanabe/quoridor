@@ -90,9 +90,10 @@ func (c *boardCase)appliedBorad(board *QuoridorBoard) *QuoridorBoard {
 	return b
 }
 
-func playout(board *QuoridorBoard) (bool, error) {
+func playout(board *QuoridorBoard) (bool, int, error) {
 	max := maxRoute(board)
 	cnt := 0
+	routeSearch := 0
 	for cnt < 100 {
 
 		// Player turn
@@ -100,7 +101,7 @@ func playout(board *QuoridorBoard) (bool, error) {
 		for _, m := range(moves) {
 			// player won
 			if m.Y == 0 {
-				return false, nil
+				return false, routeSearch, nil
 			}
 		}
 		cases := make([]boardCase,0)
@@ -114,7 +115,7 @@ func playout(board *QuoridorBoard) (bool, error) {
 			}
 		}
 		// Player evaluate
-		bestEval := -10000
+		bestEval := -1000
 		bestIndices := make([]int, 0)
 		for i := 0; i < len(cases); i++ {
 			b := cases[i].appliedBorad(board)
@@ -133,8 +134,9 @@ func playout(board *QuoridorBoard) (bool, error) {
 				bestIndices = append(bestIndices, i)
 			}
 		}
+		routeSearch += len(cases)
 		if len(bestIndices) == 0 {
-			return false, fmt.Errorf("No possible move/wall in playout - Player evaluate")
+			return false, routeSearch, fmt.Errorf("No possible move/wall in playout - Player evaluate")
 		}
 		// Random player
 		index := bestIndices[rand.Intn(len(bestIndices))]
@@ -146,7 +148,7 @@ func playout(board *QuoridorBoard) (bool, error) {
 		} else if cases[index].turn.playerMove != nil {
 			board.PlayerPos = *cases[index].turn.playerMove
 		} else {
-			return false, fmt.Errorf("Compute error in playout - Random player")
+			return false, routeSearch, fmt.Errorf("Compute error in playout - Random player")
 		}
 
 		//fmt.Printf("%03d PLY - ", cnt)
@@ -163,7 +165,7 @@ func playout(board *QuoridorBoard) (bool, error) {
 		for _, m := range(moves) {
 			// computer won
 			if m.Y == board.Dimension-1 {
-				return true, nil
+				return true, routeSearch, nil
 			}
 		}
 		cases = make([]boardCase,0)
@@ -177,7 +179,7 @@ func playout(board *QuoridorBoard) (bool, error) {
 			}
 		}
 		// Com evaluate
-		bestEval = -10000
+		bestEval = -1000
 		bestIndices = make([]int, 0)
 		for i := 0; i < len(cases); i++ {
 			b := cases[i].appliedBorad(board)
@@ -197,8 +199,9 @@ func playout(board *QuoridorBoard) (bool, error) {
 			}
 		}
 		if len(bestIndices) == 0 {
-			return false, fmt.Errorf("No possible move/wall in playout - Com evaluate")
+			return false, routeSearch, fmt.Errorf("No possible move/wall in playout - Com evaluate")
 		}
+		routeSearch += len(cases)
 		// Random com
 		index = bestIndices[rand.Intn(len(bestIndices))]
 		if cases[index].turn.wall != nil {
@@ -209,7 +212,7 @@ func playout(board *QuoridorBoard) (bool, error) {
 		} else if cases[index].turn.comMove != nil {
 			board.ComPos = *cases[index].turn.comMove
 		} else {
-			return false, fmt.Errorf("Compute error in playout - Random com")
+			return false, routeSearch, fmt.Errorf("Compute error in playout - Random com")
 		}
 
 		//fmt.Printf("%03d COM - ", cnt)
@@ -223,10 +226,10 @@ func playout(board *QuoridorBoard) (bool, error) {
 
 		cnt++
 	}
-	return false, fmt.Errorf("Reached limit in playout %d", cnt)
+	return false, routeSearch, fmt.Errorf("Reached limit in playout %d", cnt)
 }
 
-func prob_compute(ret *QuoridorResponse, numPlayouts int) error {
+func prob_compute(ret *QuoridorResponse) error {
 
 	max := maxRoute(ret.Board)
 
@@ -234,16 +237,16 @@ func prob_compute(ret *QuoridorResponse, numPlayouts int) error {
 	cases := make([]boardCase,0)
 	moves := possibleComMoves(ret.Board)
 	for i := 0; i < len(moves); i++ {
-		cases = append(cases, boardCase{turn:turn{playerMove:nil,comMove:&moves[i],wall:nil},eval:-10000,nextEval:-10000,prev:nil})
+		cases = append(cases, boardCase{turn:turn{playerMove:nil,comMove:&moves[i],wall:nil},eval:-10000,nextEval:0,prev:nil})
 	}
 	if ret.Board.ComWalls > 0 {
 		walls := possibleWalls(ret.Board)
 		for i := 0; i < len(walls); i++ {
-			cases = append(cases, boardCase{turn:turn{playerMove:nil,comMove:nil,wall:&walls[i]},eval:-10000,nextEval:-10000,prev:nil})
+			cases = append(cases, boardCase{turn:turn{playerMove:nil,comMove:nil,wall:&walls[i]},eval:-10000,nextEval:0,prev:nil})
 		}
 	}
 	// evaluate by route
-	bestEval := -10000
+	bestEval := -1000
 	bestIndices := make([]int, 0)
 	for i := 0; i < len(cases); i++ {
 		b := cases[i].appliedBorad(ret.Board)
@@ -266,31 +269,40 @@ func prob_compute(ret *QuoridorResponse, numPlayouts int) error {
 		return fmt.Errorf("No possible move/wall")
 	}
 	// evaluate by playouts
-	bestPlayout := -1
-	bestIndex := -1
-	for i := 0; i < len(bestIndices); i++ {
-		b := cases[bestIndices[i]].appliedBorad(ret.Board)
-		numWins := 0
-		for j := 0; j < numPlayouts; j++ {
+	routeSearch := 0
+	playouts := 0
+	for j := 0; j < 100; j++ {
+		for i := 0; i < len(bestIndices); i++ {
+
+			b := cases[bestIndices[i]].appliedBorad(ret.Board)
 
 			//fmt.Printf("Playout %02d for: ", j)
 			//cases[bestIndices[i]].turn.Print()
 			//fmt.Printf("\n")
 
-			win, err := playout(b.Copy())
+			win, search, err := playout(b.Copy())
 			if err != nil {
 				return err
 			}
 			if win {
-				numWins++
+				cases[bestIndices[i]].nextEval++
 			}
+			routeSearch += search
 		}
-		if numWins > bestPlayout {
-			bestPlayout = numWins
+		playouts++
+		if routeSearch > 100000 {
+			break
+		}
+	}
+	bestPlayout := -1
+	bestIndex := -1
+	for i := 0; i < len(bestIndices); i++ {
+		if cases[bestIndices[i]].nextEval > bestPlayout {
+			bestPlayout = cases[bestIndices[i]].nextEval
 			bestIndex = bestIndices[i]
 		}
 	}
-	if bestIndex < 0 {
+	if bestIndex < 0 || playouts == 0 {
 		return fmt.Errorf("No best playout")
 	}
 	// Set board
@@ -306,8 +318,8 @@ func prob_compute(ret *QuoridorResponse, numPlayouts int) error {
 	}
 	// Set debug values
 	ret.Evaluation = &QuoridorEvaluation{
-		Eval: bestPlayout,
-		NextPlayerEval: bestEval,
+		Eval: bestPlayout * 100 / playouts,
+		NumCases: routeSearch,
 	}
 	return nil
 }
@@ -478,7 +490,7 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 		// compute
 		// return compute(ret, true)
 		rand.Seed(time.Now().UnixNano())
-		return prob_compute(ret, 10)
+		return prob_compute(ret)
 	}
 	if req.Action == "Rand" {
 		ret.Board = req.Board
