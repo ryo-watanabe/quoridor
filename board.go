@@ -26,6 +26,8 @@ type QuoridorBoard struct {
 	ComPos position	`json:"comPos"`
 	PlayerWalls int `json:"playerWalls"`
 	ComWalls int `json:"comWalls"`
+	PlayerGoal int `json:"playerGoal"`
+	ComGoal int `json:"comGoal"`
 }
 
 func (b *QuoridorBoard)Copy() *QuoridorBoard {
@@ -207,6 +209,8 @@ func initBoard(req *QuoridorRequest, ret *QuoridorResponse) error {
 		PlayerPos: position{Y:dim-1, X:dim/2},
 		ComWalls: initWalls(dim),
 		PlayerWalls: initWalls(dim),
+		ComGoal: dim-1,
+		PlayerGoal: 0,
 	}
 	return nil
 }

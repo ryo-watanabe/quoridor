@@ -9,6 +9,9 @@ var board = {};
 var undoboard = null;
 var gameinit = false;
 var playable = true;
+var manual = false;
+var currentplayer = "1";
+var currentcom = "2";
 
 function addattr(element) {
 	element.setAttribute("onmouseover", "mouseover(this)");
@@ -36,7 +39,7 @@ function quoridor_data(res)
 	if (res.evaluation) {
 		document.getElementById("eval").innerHTML = "eval:" + res.evaluation.eval + "%";
 		// " / player eval:" + res.evaluation.nextPlayerEval +
-		//" / route calc:" + res.evaluation.numCases;
+		// " / route calc:" + res.evaluation.numCases;
 		// " / player cases:" + res.evaluation.numNextPlayerCases;
 	} else {
 		document.getElementById("eval").innerHTML = "";
@@ -60,7 +63,9 @@ function quoridor_data(res)
 		res.board.blockings = [];
 	}
 	// walls left
-	document.getElementById("walls").innerHTML = "Walls left com:" + res.board.comWalls + " player:" + res.board.playerWalls;
+	if (!manual) {
+		document.getElementById("walls").innerHTML = "Walls left com:" + res.board.comWalls + " player:" + res.board.playerWalls;
+	}
 
 	if (res.status == "COM") {
 		for (j = 0; j < dim; j++) {
@@ -69,10 +74,29 @@ function quoridor_data(res)
 		}
 	}
 	if (res.status == "PLY") {
+		var goal = 0;
+		if (manual) {
+			if (currentplayer == "2") goal = dim - 1;
+			document.getElementById("message").innerHTML = "Player" + currentplayer + " won";
+		}
 		for (j = 0; j < dim; j++) {
-			roomid = String(0) + String(j);
+			roomid = String(goal) + String(j);
 			setbg(document.getElementById(roomid), "#ccffff");
 		}
+	}
+
+	if (manual && res.status == "OK") {
+		currentcom = currentplayer;
+		if (currentplayer == "1") {
+			currentplayer = "2";
+			document.getElementById("walls").innerHTML = "Walls left P1:" + res.board.comWalls + " P2:" + res.board.playerWalls;
+			document.getElementById("eval").innerHTML = "eval(P1:P2) " + res.evaluation.eval + "%:" + (100 - res.evaluation.eval) + "%";
+		} else {
+			currentplayer = "1";
+			document.getElementById("walls").innerHTML = "Walls left P1:" + res.board.playerWalls + " P2:" + res.board.comWalls;
+			document.getElementById("eval").innerHTML = "eval(P1:P2) " + (100 - res.evaluation.eval) + "%:" + res.evaluation.eval + "%";
+		}
+		document.getElementById("message").innerHTML = "Player" + currentplayer;
 	}
 
 	updateyou(String(res.board.playerPos.y) + String(res.board.playerPos.x));
@@ -82,6 +106,7 @@ function quoridor_data(res)
 	if (res.status == "OK")	playable = true;
 
 	document.getElementById("comfirstbtn").disabled = !gameinit;
+	document.getElementById("manualbtn").disabled = !gameinit;
 }
 
 function comfirst() {
@@ -90,54 +115,27 @@ function comfirst() {
 	request_quoridor_data({action:"Com", board:board});
 }
 
+function twoplayer() {
+	if (!gameinit) return;
+	manual = true;
+	currentplayer = "1";
+	currentcom = "2";
+	document.getElementById("manualbtn").disabled = true;
+	document.getElementById("message").innerHTML = "Player1";
+	document.getElementById(you["nowon"]).innerHTML = "P1";
+	document.getElementById(com["nowon"]).innerHTML = "P2";
+	document.getElementById("walls").innerHTML = "Walls left P1:" + board.playerWalls + " P2:" + board.comWalls;
+}
+
 function undocopy() {
 	var str = JSON.stringify(board);
 	undoboard = JSON.parse(str);
 }
 
 function undo() {
+
 	if (undoboard == null) return;
 
-	/*
-	// poles
-	for (var i = 0; i < board.poles.length; i++) {
-		var undo = true;
-		for (var j = 0; j < undoboard.poles.length; j++) {
-			if (board.poles[i].x == undoboard.poles[j].x && board.poles[i].y == undoboard.poles[j].y) {
-				undo = false;
-				break;
-			}
-		}
-		if (undo) {
-			unbuildpole(board.poles[i])
-		}
-	}
-	// blockings
-	for (var i = 0; i < board.blockings.length; i++) {
-		var undo = true;
-		for (var j = 0; j < undoboard.blockings.length; j++) {
-			if (board.blockings[i][0].x == undoboard.blockings[j][0].x
-			 && board.blockings[i][0].y == undoboard.blockings[j][0].y
-			 && board.blockings[i][1].x == undoboard.blockings[j][1].x
-			 && board.blockings[i][1].y == undoboard.blockings[j][1].y) {
-				undo = false;
-				break;
-			}
-		}
-		if (undo) {
-			unbuildblock(board.blockings[i]);
-		}
-	}
-	// undo from COM/PLY
-	for (j = 0; j < dim; j++) {
-		roomid = String(dim - 1) + String(j);
-		setbg(document.getElementById(roomid), "#ffffff");
-	}
-	for (j = 0; j < dim; j++) {
-		roomid = String(0) + String(j);
-		setbg(document.getElementById(roomid), "#ffffff");
-	}
-	*/
 	draw_board();
 	// poles
 	for (var i = 0; i < undoboard.poles.length; i++) {
@@ -150,6 +148,17 @@ function undo() {
 	// walls left
 	document.getElementById("walls").innerHTML = "Walls left com:" + undoboard.comWalls + " player:" + undoboard.playerWalls;
 
+	if (manual) {
+		currentcom = currentplayer;
+		if (currentplayer == "1") {
+			currentplayer = "2";
+			document.getElementById("walls").innerHTML = "Walls left P1:" + undoboard.comWalls + " P2:" + undoboard.playerWalls;
+		} else {
+			currentplayer = "1";
+			document.getElementById("walls").innerHTML = "Walls left P1:" + undoboard.playerWalls + " P2:" + undoboard.comWalls;
+		}
+		document.getElementById("message").innerHTML = "Player" + currentplayer;
+	}
 	updateyou(String(undoboard.playerPos.y) + String(undoboard.playerPos.x));
 	updatecom(String(undoboard.comPos.y) + String(undoboard.comPos.x));
 	updatemove();
@@ -166,6 +175,7 @@ function newgame(dimension) {
 
 function start() {
 	gameinit = true;
+	manual = false;
 	draw_board();
 	request_quoridor_data({action:"Init", board:{dimension:dim}});
 }
@@ -328,7 +338,11 @@ function writewall(wallparts) {
 	board.playerWalls--;
 	playable = false;
 	document.getElementById("undobtn").disabled = true;
-	request_quoridor_data({action:"Com", board:board});
+
+	var action = "Com";
+	if (manual) action = "Man";
+	var calc = parseInt(document.getElementById("calc").value)
+	request_quoridor_data({action:action, board:board, calc:calc});
 }
 
 function mouseover(element) {
@@ -385,14 +399,22 @@ function updateyou(roomid) {
 	document.getElementById(you["nowon"]).innerHTML = "";
 	document.getElementById(you["nowon"]).classList.remove("player");
 	document.getElementById(roomid).innerHTML = "Ply";
+	if (manual) {
+		document.getElementById(roomid).innerHTML = "P" + currentplayer;
+	}
 	document.getElementById(roomid).classList.add("player");
 	you["nowon"] = roomid;
 }
 
 function updatecom(roomid) {
-	document.getElementById(com["nowon"]).innerHTML = "";
+	if (!manual) {
+		document.getElementById(com["nowon"]).innerHTML = "";
+	}
 	document.getElementById(com["nowon"]).classList.remove("com");
 	document.getElementById(roomid).innerHTML = "Com";
+	if (manual) {
+		document.getElementById(roomid).innerHTML = "P" + currentcom;
+	}
 	document.getElementById(roomid).classList.add("com");
 	com["nowon"] = roomid;
 }
@@ -449,7 +471,10 @@ function roommouseclick(element) {
 			board.playerPos = {y:parseInt(element.id.substr(0, 1)), x:parseInt(element.id.substr(1, 1))}
 			playable = false;
 			document.getElementById("undobtn").disabled = true;
-			request_quoridor_data({action:"Com", board:board});
+			var action = "Com";
+			if (manual) action = "Man";
+			var calc = parseInt(document.getElementById("calc").value)
+			request_quoridor_data({action:action, board:board, calc:calc});
 			return;
 		}
 	}

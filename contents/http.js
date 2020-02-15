@@ -1,7 +1,7 @@
 function request_quoridor_data(req)
 {
 	document.getElementById("status").innerHTML = "Wait";
-	document.getElementById("message").innerHTML = "Sending request...";
+	document.getElementById("message").innerHTML = "Sending request... <img src='loading.gif'>";
 	http = new XMLHttpRequest();
 	http.open('POST', '/api/', true);
 	http.setRequestHeader('Content-Type', 'application/json');

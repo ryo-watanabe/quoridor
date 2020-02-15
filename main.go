@@ -24,6 +24,7 @@ type QuoridorEvaluation struct {
 type QuoridorRequest struct {
 	Action string	`json:"action"`
 	Board *QuoridorBoard	`json:"board,omitempty"`
+	Calc int  `json:"calc,omitempty"`
 }
 
 type QuoridorResponse struct {
@@ -31,6 +32,7 @@ type QuoridorResponse struct {
 	Board *QuoridorBoard	`json:"board,omitempty"`
 	Message string	`json:"message,omitempty"`
 	Evaluation *QuoridorEvaluation   `json:"evaluation"`
+	Calc int  `json:"calc,omitempty"`
 }
 
 func eval(player, com int) int {
@@ -100,7 +102,7 @@ func playout(board *QuoridorBoard) (bool, int, error) {
 		moves := possiblePlayerMoves(board)
 		for _, m := range(moves) {
 			// player won
-			if m.Y == 0 {
+			if m.Y == board.PlayerGoal {
 				return false, routeSearch, nil
 			}
 		}
@@ -119,8 +121,8 @@ func playout(board *QuoridorBoard) (bool, int, error) {
 		bestIndices := make([]int, 0)
 		for i := 0; i < len(cases); i++ {
 			b := cases[i].appliedBorad(board)
-			com, com_ok := shortestTreeRoute(b, b.ComPos, board.Dimension-1, max)
-			player, player_ok := shortestTreeRoute(b, b.PlayerPos, 0, max)
+			com, com_ok := shortestTreeRoute(b, b.ComPos, board.ComGoal, max)
+			player, player_ok := shortestTreeRoute(b, b.PlayerPos, board.PlayerGoal, max)
 			if com_ok && player_ok {
 				cases[i].eval = eval(com, player)
 				cases[i].com = com
@@ -164,7 +166,7 @@ func playout(board *QuoridorBoard) (bool, int, error) {
 		moves = possibleComMoves(board)
 		for _, m := range(moves) {
 			// computer won
-			if m.Y == board.Dimension-1 {
+			if m.Y == board.ComGoal {
 				return true, routeSearch, nil
 			}
 		}
@@ -183,8 +185,8 @@ func playout(board *QuoridorBoard) (bool, int, error) {
 		bestIndices = make([]int, 0)
 		for i := 0; i < len(cases); i++ {
 			b := cases[i].appliedBorad(board)
-			com, com_ok := shortestTreeRoute(b, b.ComPos, board.Dimension-1, max)
-			player, player_ok := shortestTreeRoute(b, b.PlayerPos, 0, max)
+			com, com_ok := shortestTreeRoute(b, b.ComPos, board.ComGoal, max)
+			player, player_ok := shortestTreeRoute(b, b.PlayerPos, board.PlayerGoal, max)
 			if com_ok && player_ok {
 				cases[i].eval = eval(player, com)
 				cases[i].com = com
@@ -229,7 +231,36 @@ func playout(board *QuoridorBoard) (bool, int, error) {
 	return false, routeSearch, fmt.Errorf("Reached limit in playout %d", cnt)
 }
 
-func prob_compute(ret *QuoridorResponse) error {
+func prob_evaluate(ret *QuoridorResponse, calc int) error {
+	// evaluate by playouts
+	routeSearch := 0
+	playouts := 0
+	numWin := 0
+	for j := 0; j < 100; j++ {
+		win, search, err := playout(ret.Board.Copy())
+		if err != nil {
+			return err
+		}
+		if win {
+			numWin++
+		}
+		routeSearch += search
+		playouts++
+		if routeSearch > calc {
+			break
+		}
+	}
+	if playouts == 0 {
+		return fmt.Errorf("No playouts completed")
+	}
+	ret.Evaluation = &QuoridorEvaluation{
+		Eval: numWin * 100 / playouts,
+		NumCases: routeSearch,
+	}
+	return nil
+}
+
+func prob_compute(ret *QuoridorResponse, calc int) error {
 
 	max := maxRoute(ret.Board)
 
@@ -290,7 +321,7 @@ func prob_compute(ret *QuoridorResponse) error {
 			routeSearch += search
 		}
 		playouts++
-		if routeSearch > 100000 {
+		if routeSearch > calc {
 			break
 		}
 	}
@@ -468,6 +499,7 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 	}
 	if req.Action == "Com" {
 		ret.Board = req.Board
+		ret.Calc = req.Calc
 
 		// player won
 		if ret.Board.PlayerPos.Y == 0 {
@@ -489,8 +521,44 @@ func action(req *QuoridorRequest, ret *QuoridorResponse) error {
 
 		// compute
 		// return compute(ret, true)
+		calc := 100000
+		if req.Calc != 0 {
+			calc = req.Calc
+		}
 		rand.Seed(time.Now().UnixNano())
-		return prob_compute(ret)
+		return prob_compute(ret, calc)
+	}
+	if req.Action == "Man" {
+		ret.Board = req.Board
+		ret.Calc = req.Calc
+		// player won
+		if ret.Board.PlayerPos.Y == ret.Board.PlayerGoal {
+			ret.Message = "Player won"
+			ret.Status = "PLY"
+			return nil
+		}
+		// Change pos
+		tmpPos := ret.Board.ComPos
+		ret.Board.ComPos = ret.Board.PlayerPos
+		ret.Board.PlayerPos = tmpPos
+		// Change walls
+		tmpWalls := ret.Board.ComWalls
+		ret.Board.ComWalls = ret.Board.PlayerWalls
+		ret.Board.PlayerWalls = tmpWalls
+		// Change goals
+		tmpGoal := ret.Board.ComGoal
+		ret.Board.ComGoal = ret.Board.PlayerGoal
+		ret.Board.PlayerGoal = tmpGoal
+		// evaluate
+		calc := 100000
+		if req.Calc != 0 {
+			calc = req.Calc
+		}
+		err := prob_evaluate(ret, calc)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 	if req.Action == "Rand" {
 		ret.Board = req.Board
