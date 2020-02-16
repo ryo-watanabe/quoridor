@@ -70,7 +70,7 @@ function quoridor_data(res)
 	if (res.status == "COM") {
 		for (j = 0; j < dim; j++) {
 			roomid = String(dim - 1) + String(j);
-			setbg(document.getElementById(roomid), "#ffccff");
+			setbg(document.getElementById(roomid), "#bb88bb");
 		}
 	}
 	if (res.status == "PLY") {
@@ -81,7 +81,7 @@ function quoridor_data(res)
 		}
 		for (j = 0; j < dim; j++) {
 			roomid = String(goal) + String(j);
-			setbg(document.getElementById(roomid), "#ccffff");
+			setbg(document.getElementById(roomid), "#88bbbb");
 		}
 	}
 
@@ -351,9 +351,9 @@ function mouseover(element) {
 	if (!playable) return;
 	if (board.playerWalls <= 0) return
 	if (wall[element.id] && !isbuilt(wall[element.id])) {
-		drawwall(wall[element.id], "#cccccc");
+		drawwall(wall[element.id], "#aaaaaa");
 	} else if (altwall[element.id] && !isbuilt(altwall[element.id])) {
-		drawwall(altwall[element.id], "#cccccc");
+		drawwall(altwall[element.id], "#aaaaaa");
 	}
 }
 
@@ -361,9 +361,9 @@ function mouseout(element) {
 	if (!playable) return;
 	if (board.playerWalls <= 0) return
 	if (wall[element.id] && !isbuilt(wall[element.id])) {
-		drawwall(wall[element.id], "#ffffff");
+		drawwall(wall[element.id], "#ffffff00");
 	} else if (altwall[element.id] && !isbuilt(altwall[element.id])) {
-		drawwall(altwall[element.id], "#ffffff");
+		drawwall(altwall[element.id], "#ffffff00");
 	}
 }
 
