@@ -138,7 +138,7 @@ func playout(board *QuoridorBoard) (bool, int, error) {
 		}
 		routeSearch += len(cases)
 		if len(bestIndices) == 0 {
-			return false, routeSearch, fmt.Errorf("No possible move/wall in playout - Player evaluate")
+			return false, routeSearch, fmt.Errorf("No possible move/wall")
 		}
 		// Random player
 		index := bestIndices[rand.Intn(len(bestIndices))]
@@ -150,7 +150,7 @@ func playout(board *QuoridorBoard) (bool, int, error) {
 		} else if cases[index].turn.playerMove != nil {
 			board.PlayerPos = *cases[index].turn.playerMove
 		} else {
-			return false, routeSearch, fmt.Errorf("Compute error in playout - Random player")
+			return false, routeSearch, fmt.Errorf("Compute error")
 		}
 
 		//fmt.Printf("%03d PLY - ", cnt)
@@ -201,7 +201,7 @@ func playout(board *QuoridorBoard) (bool, int, error) {
 			}
 		}
 		if len(bestIndices) == 0 {
-			return false, routeSearch, fmt.Errorf("No possible move/wall in playout - Com evaluate")
+			return false, routeSearch, fmt.Errorf("No possible move/wall")
 		}
 		routeSearch += len(cases)
 		// Random com
@@ -214,7 +214,7 @@ func playout(board *QuoridorBoard) (bool, int, error) {
 		} else if cases[index].turn.comMove != nil {
 			board.ComPos = *cases[index].turn.comMove
 		} else {
-			return false, routeSearch, fmt.Errorf("Compute error in playout - Random com")
+			return false, routeSearch, fmt.Errorf("Compute error")
 		}
 
 		//fmt.Printf("%03d COM - ", cnt)
@@ -228,7 +228,7 @@ func playout(board *QuoridorBoard) (bool, int, error) {
 
 		cnt++
 	}
-	return false, routeSearch, fmt.Errorf("Reached limit in playout %d", cnt)
+	return false, routeSearch, fmt.Errorf("Playout limit %d", cnt)
 }
 
 func prob_evaluate(ret *QuoridorResponse, calc int) error {

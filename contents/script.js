@@ -149,13 +149,15 @@ function undo() {
 	document.getElementById("walls").innerHTML = "Walls left com:" + undoboard.comWalls + " player:" + undoboard.playerWalls;
 
 	if (manual) {
-		currentcom = currentplayer;
-		if (currentplayer == "1") {
-			currentplayer = "2";
-			document.getElementById("walls").innerHTML = "Walls left P1:" + undoboard.comWalls + " P2:" + undoboard.playerWalls;
-		} else {
-			currentplayer = "1";
-			document.getElementById("walls").innerHTML = "Walls left P1:" + undoboard.playerWalls + " P2:" + undoboard.comWalls;
+		if (playable) {
+			currentcom = currentplayer;
+			if (currentplayer == "1") {
+				currentplayer = "2";
+				document.getElementById("walls").innerHTML = "Walls left P1:" + undoboard.comWalls + " P2:" + undoboard.playerWalls;
+			} else {
+				currentplayer = "1";
+				document.getElementById("walls").innerHTML = "Walls left P1:" + undoboard.playerWalls + " P2:" + undoboard.comWalls;
+			}
 		}
 		document.getElementById("message").innerHTML = "Player" + currentplayer;
 	}
