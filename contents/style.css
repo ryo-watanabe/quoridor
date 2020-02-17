@@ -2,8 +2,9 @@ html {
 	text-align: center;
 	font-size: 2vw;
 	font-family: 'Orbitron', sans-serif;
-	background-color: #447744;
-	color: #dddddd;
+	//background-color: #447744;
+	//color: #dddddd;
+	color: #669966;
 }
 h1.title {
 	font-size: 500%;
@@ -21,7 +22,7 @@ td {
 td.room {
         width: 70px;
         height: 70px;
-        border: 2px #aaaaaa solid;
+        border: 2px #99dd99 solid;
 	font-size: x-large;
 }
 td.hcorr {
@@ -33,17 +34,21 @@ td.vcorr {
         height: 70px;
 }
 td.move:hover {
-        background-color: #88bbbb;
+        background-color: #ccffff;
 }
 td.player {
-        background-color: #77aaaa;
+        background-color: #aadddd;
 }
 td.com {
-        background-color: #aa77aa;
+        background-color: #ddaadd;
 }
 button, input, select, textarea {
-  font-family : inherit;
-  font-size   : 100%;
+	font-family: inherit;
+	font-size: 100%;
+	color: inherit;
+}
+button:disabled {
+	color: #aaddaa;
 }
 span.eval {
 	font-size: 200%;

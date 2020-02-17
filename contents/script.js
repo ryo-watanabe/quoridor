@@ -70,7 +70,7 @@ function quoridor_data(res)
 	if (res.status == "COM") {
 		for (j = 0; j < dim; j++) {
 			roomid = String(dim - 1) + String(j);
-			setbg(document.getElementById(roomid), "#bb88bb");
+			setbg(document.getElementById(roomid), "#ddaadd");
 		}
 	}
 	if (res.status == "PLY") {
@@ -81,7 +81,7 @@ function quoridor_data(res)
 		}
 		for (j = 0; j < dim; j++) {
 			roomid = String(goal) + String(j);
-			setbg(document.getElementById(roomid), "#88bbbb");
+			setbg(document.getElementById(roomid), "#aadddd");
 		}
 	}
 
@@ -317,11 +317,11 @@ function mouseclick(element) {
 	if (board.playerWalls <= 0) return;
 	if (wall[element.id] && !isbuilt(wall[element.id])) {
 		wall[element.id].forEach( function(value) { document.getElementById(value).classList.add("built"); });
-		drawwall(wall[element.id], "#444444");
+		drawwall(wall[element.id], "#446644");
 		writewall(wall[element.id]);
 	} else if (altwall[element.id] && !isbuilt(altwall[element.id])) {
 		altwall[element.id].forEach( function(value) { document.getElementById(value).classList.add("built"); });
-		drawwall(altwall[element.id], "#444444");
+		drawwall(altwall[element.id], "#446644");
 		writewall(altwall[element.id]);
 	}
 }
@@ -351,9 +351,9 @@ function mouseover(element) {
 	if (!playable) return;
 	if (board.playerWalls <= 0) return
 	if (wall[element.id] && !isbuilt(wall[element.id])) {
-		drawwall(wall[element.id], "#aaaaaa");
+		drawwall(wall[element.id], "#aaccaa");
 	} else if (altwall[element.id] && !isbuilt(altwall[element.id])) {
-		drawwall(altwall[element.id], "#aaaaaa");
+		drawwall(altwall[element.id], "#aaccaa");
 	}
 }
 
@@ -374,25 +374,25 @@ function drawwall(wallparts, color) {
 function buildpole(pole) {
 	poleid = "pole" + String(pole.y) + String(pole.x);
 	document.getElementById(poleid).classList.add("built");
-	setbg(document.getElementById(poleid), "#444444");
+	setbg(document.getElementById(poleid), "#446644");
 }
 
 function buildblock(block) {
 	blockid = "corr" + String(block[0].y) + String(block[0].x) + ":" + String(block[1].y) + String(block[1].x);
 	document.getElementById(blockid).classList.add("built");
-	setbg(document.getElementById(blockid), "#444444");
+	setbg(document.getElementById(blockid), "#446644");
 }
 
 function unbuildpole(pole) {
 	poleid = "pole" + String(pole.y) + String(pole.x);
 	document.getElementById(poleid).classList.remove("built");
-	setbg(document.getElementById(poleid), "#ffffff");
+	setbg(document.getElementById(poleid), "#ffffff00");
 }
 
 function unbuildblock(block) {
 	blockid = "corr" + String(block[0].y) + String(block[0].x) + ":" + String(block[1].y) + String(block[1].x);
 	document.getElementById(blockid).classList.remove("built");
-	setbg(document.getElementById(blockid), "#ffffff");
+	setbg(document.getElementById(blockid), "#ffffff00");
 }
 
 // Room UI functions
