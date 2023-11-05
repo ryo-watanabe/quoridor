@@ -5,7 +5,7 @@ function request_quoridor_data(req)
 	http = new XMLHttpRequest();
 	http.open('POST', '/api/', true);
 	http.setRequestHeader('Content-Type', 'application/json');
-	http.setRequestHeader('Authorization', 'Basic ' + '[base64 user:pass]');
+	http.setRequestHeader('Authorization', 'Basic ' + '[set base64 user:pass]');
 	http.onreadystatechange = function() {
 		if (http.readyState == 4) {
 			console.log("Status:" + http.status);
